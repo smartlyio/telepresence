@@ -275,20 +275,6 @@ func eachConfiguredContainer(configureContainers []*core.Container, config *Side
 	}
 }
 
-// EachContainer will find each container in the given config and match it against a container
-// in the pod using its name. The given function is called once for each match.
-func EachContainer(pod *core.Pod, config *Sidecar, f func(*core.Container, *Container)) {
-	cns := pod.Spec.Containers
-	for _, cc := range config.Containers {
-		for i := range cns {
-			if app := &cns[i]; app.Name == cc.Name {
-				f(app, cc)
-				break
-			}
-		}
-	}
-}
-
 func appendAppContainerVolumeMounts(
 	app *core.Container,
 	cc *Container,

@@ -214,6 +214,20 @@ func (s *Sidecar) Clone() SidecarExt {
 	return &cs
 }
 
+// EachContainer will find each container and match it against a container
+// in the pod using its name. The given function is called once for each match.
+func (s *Sidecar) EachContainer(pod *core.Pod, f func(*core.Container, *Container)) {
+	cns := pod.Spec.Containers
+	for _, cc := range s.Containers {
+		for i := range cns {
+			if app := &cns[i]; app.Name == cc.Name {
+				f(app, cc)
+				break
+			}
+		}
+	}
+}
+
 // Marshal returns YAML encoding of the Sidecar.
 func (s *Sidecar) Marshal() ([]byte, error) {
 	return yaml.Marshal(s)
