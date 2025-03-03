@@ -22,6 +22,17 @@ properties:
           - portName
           - http
           - http2
+      mountPolicies:
+        description: 'List of volume mount policies. Defaults to {"/tmp" : "Ignore"}'
+        type: object
+        additionalProperties:
+          description: The name or path prefix match of the volume that the policy applies to
+          type: string
+          enum:
+            - Remote
+            - RemoteReadOnly
+            - Local
+            - Ignore
       image:
         type: object
         additionalProperties: false

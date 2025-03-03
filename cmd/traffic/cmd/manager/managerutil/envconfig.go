@@ -58,6 +58,7 @@ type Env struct {
 	AgentLogLevel            string                      `env:"AGENT_LOG_LEVEL,               parser=logLevel,       defaultFrom=LogLevel"`
 	AgentPort                uint16                      `env:"AGENT_PORT,                    parser=port-number,    default=0"`
 	AgentResources           *core.ResourceRequirements  `env:"AGENT_RESOURCES,               parser=json-resources, default="`
+	AgentMountPolicies       agentconfig.MountPolicies   `env:"AGENT_MOUNT_POLICIES,          parser=json-mount-policies, default="`
 	AgentInitResources       *core.ResourceRequirements  `env:"AGENT_INIT_RESOURCES,          parser=json-resources, default="`
 	AgentInjectorName        string                      `env:"AGENT_INJECTOR_NAME,           parser=string,         default="`
 	AgentInjectorSecret      string                      `env:"AGENT_INJECTOR_SECRET,         parser=string,         default="`
@@ -92,6 +93,7 @@ func (e *Env) GeneratorConfig(qualifiedAgentImage string) (agentmap.GeneratorCon
 		AppProtocolStrategy: e.AgentAppProtocolStrategy,
 		SecurityContext:     e.AgentSecurityContext,
 		InitSecurityContext: e.AgentInitSecurityContext,
+		MountPolicies:       e.AgentMountPolicies,
 	}, nil
 }
 
@@ -156,6 +158,21 @@ func fieldTypeHandlers() map[reflect.Type]envconfig.FieldTypeHandler {
 			},
 		},
 		Setter: func(dst reflect.Value, src any) { dst.Set(reflect.ValueOf(src.(netip.Addr))) },
+	}
+	fhs[reflect.TypeOf(agentconfig.MountPolicies{})] = envconfig.FieldTypeHandler{
+		Parsers: map[string]func(string) (any, error){
+			"json-mount-policies": func(js string) (any, error) {
+				if js == "" {
+					return nil, nil
+				}
+				var mps agentconfig.MountPolicies
+				if err := json.Unmarshal([]byte(js), &mps); err != nil {
+					return nil, err
+				}
+				return mps, nil
+			},
+		},
+		Setter: func(dst reflect.Value, src any) { dst.Set(reflect.ValueOf(src.(agentconfig.MountPolicies))) },
 	}
 	fhs[reflect.TypeOf([]string{})] = envconfig.FieldTypeHandler{
 		Parsers: map[string]func(string) (any, error){

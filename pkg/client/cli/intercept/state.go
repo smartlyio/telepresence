@@ -191,15 +191,6 @@ func (s *state) create(ctx context.Context) (acquired bool, err error) {
 		return false, errcat.NoDaemonLogs.New(err)
 	}
 
-	if ir.MountPoint != "" {
-		defer func() {
-			if !acquired && runtime.GOOS != "windows" {
-				// remove if empty
-				_ = os.Remove(ir.MountPoint)
-			}
-		}()
-	}
-
 	defer func() {
 		if err != nil {
 			scout.Report(ctx, "intercept_fail", scout.Entry{Key: "error", Value: err.Error()})
@@ -268,6 +259,15 @@ func (s *state) create(ctx context.Context) (acquired bool, err error) {
 }
 
 func (s *state) leave(ctx context.Context) error {
+	m := s.info.Mount
+	if m != nil && m.LocalDir != "" {
+		defer func() {
+			if runtime.GOOS != "windows" {
+				// remove if empty
+				_ = os.Remove(m.LocalDir)
+			}
+		}()
+	}
 	n := strings.TrimSpace(s.Name())
 	dlog.Debugf(ctx, "Leaving intercept %s", n)
 	r, err := daemon.GetUserClient(ctx).RemoveIntercept(ctx, &manager.RemoveInterceptRequest2{Name: n})

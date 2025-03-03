@@ -25,8 +25,14 @@ func StopContainer(ctx context.Context, nameOrID string) error {
 	} else {
 		dlog.Debugf(ctx, "Stopping container %s with default grace period", nameOrID)
 	}
+	_, err = cli.ContainerInspect(ctx, nameOrID)
+	if err != nil {
+		dlog.Errorf(ctx, "Failed to inspect container %s: %v", nameOrID, err)
+		return err
+	}
 	err = cli.ContainerStop(ctx, nameOrID, opts)
 	if err != nil {
+		dlog.Errorf(ctx, "Failed to stop container %s: %v", nameOrID, err)
 		return fmt.Errorf("failed to stop container %s: %v", nameOrID, err)
 	}
 	dlog.Debugf(ctx, "Container %s stopped", nameOrID)

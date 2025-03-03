@@ -11,6 +11,7 @@ import (
 	"github.com/datawire/dlib/dlog"
 	"github.com/telepresenceio/telepresence/rpc/v2/agent"
 	"github.com/telepresenceio/telepresence/rpc/v2/manager"
+	"github.com/telepresenceio/telepresence/v2/pkg/agentconfig"
 	"github.com/telepresenceio/telepresence/v2/pkg/forwarder"
 	"github.com/telepresenceio/telepresence/v2/pkg/restapi"
 	"github.com/telepresenceio/telepresence/v2/pkg/tunnel"
@@ -41,6 +42,7 @@ type ContainerState interface {
 	Name() string
 	ReplaceContainer() bool
 	MountPoint() string
+	Mounts() agentconfig.MountPolicies
 	Env() map[string]string
 }
 

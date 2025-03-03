@@ -19,6 +19,10 @@ func (c *containerState) MountPoint() string {
 	return c.mountPoint
 }
 
+func (c *containerState) Mounts() agentconfig.MountPolicies {
+	return c.container.Mounts
+}
+
 func (c *containerState) Env() map[string]string {
 	return c.env
 }

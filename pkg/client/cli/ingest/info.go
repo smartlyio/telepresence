@@ -5,6 +5,7 @@ import (
 	"io"
 
 	rpc "github.com/telepresenceio/telepresence/rpc/v2/connector"
+	"github.com/telepresenceio/telepresence/v2/pkg/agentconfig"
 	"github.com/telepresenceio/telepresence/v2/pkg/client/cli/mount"
 	"github.com/telepresenceio/telepresence/v2/pkg/ioutil"
 )
@@ -22,7 +23,8 @@ func NewInfo(ctx context.Context, ii *rpc.IngestInfo, mountError error) *Info {
 	if mountError != nil {
 		m = &mount.Info{Error: mountError.Error()}
 	} else if ii.MountPoint != "" {
-		m = mount.NewInfo(ctx, ii.Environment, ii.FtpPort, ii.SftpPort, ii.ClientMountPoint, ii.MountPoint, ii.PodIp, true)
+		m = mount.NewInfo(ctx,
+			ii.Environment, ii.FtpPort, ii.SftpPort, ii.ClientMountPoint, ii.MountPoint, ii.PodIp, agentconfig.MountPoliciesFromRPC(ii.Mounts), true)
 	}
 	return &Info{
 		WorkloadKind: ii.WorkloadKind,

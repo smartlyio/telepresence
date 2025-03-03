@@ -65,6 +65,9 @@ message AgentInfo {
 
     // The directory where the intercept mounts can be found in the agent
     string mount_point = 4;
+
+    // Map of mount -> MountPolicy
+    map<string, int32> mounts = 13;
   }
   map<string,ContainerInfo> containers = 12;
 
@@ -299,6 +302,9 @@ message InterceptInfo {
   // The environment of the intercepted app
   map<string, string> environment = 17;
 
+  // Map of mount path -> MountPolicy
+  map<string, int32> mounts = 22;
+
   // Timestamp for last modification made by traffic-manager
   google.protobuf.Timestamp modified_at = 21;
 }
@@ -394,8 +400,11 @@ message ReviewInterceptRequest {
   // Metadata used by the workstation API-server
   map<string,string> metadata = 9;
 
-  // The environment of the intercepted app
+  // The environment of the intercepted container
   map<string, string> environment = 11;
+
+  // Map of mount path -> MountPolicy of the engaged container
+  map<string, int32> mounts = 13;
 }
 
 message RemainRequest {

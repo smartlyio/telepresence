@@ -20,7 +20,7 @@ import (
 	"github.com/telepresenceio/telepresence/v2/pkg/errcat"
 )
 
-func leave() *cobra.Command {
+func leaveCmd() *cobra.Command {
 	var containerName string
 	cmd := &cobra.Command{
 		Use:  "leave [flags] <intercept_name>",
@@ -116,29 +116,25 @@ func disengage(ctx context.Context, name, container string) error {
 		env = ic.Environment
 	}
 
-	handlerContainer, stopContainer := env["TELEPRESENCE_HANDLER_CONTAINER_NAME"]
-	if stopContainer {
-		// Stop the handler's container. The daemon is most likely running in another
-		// container, and won't be able to.
-		err = docker.StopContainer(docker.EnableClient(ctx), handlerContainer)
-		if err != nil {
-			dlog.Error(ctx, err)
+	if userD.DaemonID().Containerized {
+		handlerContainer, stopContainer := env["TELEPRESENCE_HANDLER_CONTAINER_NAME"]
+		if stopContainer {
+			// Stop the handler's container. The daemon is most likely running in another
+			// container, and won't be able to.
+			err = docker.StopContainer(docker.EnableClient(ctx), handlerContainer)
+			if err != nil {
+				dlog.Error(ctx, err)
+			}
 		}
 	}
 
 	if ic != nil {
 		err = intercept.Result(userD.RemoveIntercept(ctx, &manager.RemoveInterceptRequest2{Name: ic.Spec.Name}))
-	} else if ig != nil {
+	} else {
 		_, err = userD.LeaveIngest(ctx, &connector.IngestIdentifier{
 			WorkloadName:  ig.Workload,
 			ContainerName: ig.Container,
 		})
-	}
-	if err != nil {
-		if stopContainer && strings.Contains(err.Error(), fmt.Sprintf("%q not found", name)) {
-			// race condition between stopping the handler (which causes the ingest/intercept to leave) and this call
-			err = nil
-		}
 	}
 	return err
 }

@@ -2,6 +2,7 @@ package agent_test
 
 import (
 	"context"
+	"path/filepath"
 	"runtime"
 	"testing"
 
@@ -39,7 +40,12 @@ var testConfig = agentconfig.Sidecar{
 		Name:       "test-echo",
 		EnvPrefix:  "A_",
 		MountPoint: "/tel_app_mounts/test-echo",
-		Mounts:     []string{"/home/bob"},
+		MountPaths: []string{"/home/bob"},
+		Mounts: map[string]agentconfig.MountPolicy{
+			"/tmp":          agentconfig.MountPolicyLocal,
+			"/home/bob":     agentconfig.MountPolicyRemote,
+			"/home/brianna": agentconfig.MountPolicyRemoteReadOnly,
+		},
 		Intercepts: []*agentconfig.Intercept{
 			{
 				ContainerPortName: "http",
@@ -60,7 +66,12 @@ func testContext(t *testing.T, env dos.MapEnv) context.Context {
 	if env == nil {
 		env = make(dos.MapEnv)
 	}
+
 	require.NoError(t, fs.MkdirAll(agentconfig.ExportsMountPoint, 0o700))
+
+	home := filepath.Join("/tel_app_mounts/test-echo", "home")
+	require.NoError(t, fs.MkdirAll(filepath.Join(home, "bob"), 0o700))
+	require.NoError(t, fs.MkdirAll(filepath.Join(home, "brianna"), 0o700))
 
 	cfgJSON, err := agentconfig.MarshalTight(&testConfig)
 	require.NoError(t, err)
@@ -101,12 +112,13 @@ func Test_AppEnvironment(t *testing.T) {
 	require.NoError(t, err)
 
 	cn := config.AgentConfig().Containers[0]
-	env, err := agent.AppEnvironment(ctx, cn)
+	env, err := agent.AppEnvironment(ctx, cn.Mounts, cn)
 	require.NoError(t, err)
 	require.Equal(t, map[string]string{
 		"ALPHA":                           "alpha",
 		"ZULU":                            "zulu",
 		agentconfig.EnvInterceptContainer: "test-echo",
-		agentconfig.EnvInterceptMounts:    "/home/bob",
+		agentconfig.EnvInterceptMounts:    "/home/bob:/home/brianna",
+		agentconfig.EnvLocalMounts:        "/tmp",
 	}, env)
 }

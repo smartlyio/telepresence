@@ -14,18 +14,115 @@ import (
 	docker2 "github.com/telepresenceio/telepresence/v2/pkg/client/docker"
 )
 
+type Volume struct {
+	Name    string
+	Target  string
+	Options string
+}
+
+func (v *Volume) String() string {
+	n := v.Name
+	if n == "" {
+		n = v.Target
+	} else {
+		n += ":" + v.Target
+	}
+	if v.Options != "" {
+		n += ":" + v.Options
+	}
+	return n
+}
+
+type Mount struct {
+	Type    string
+	Source  string
+	Target  string
+	Options string
+}
+
+func (m *Mount) String() string {
+	sb := new(strings.Builder)
+	sb.WriteString("type=")
+	sb.WriteString(m.Type)
+	if m.Source != "" {
+		sb.WriteString(",src=")
+		sb.WriteString(m.Source)
+	}
+	if m.Target != "" {
+		sb.WriteString(",dst=")
+		sb.WriteString(m.Target)
+	}
+	if m.Options != "" {
+		sb.WriteByte(',')
+		sb.WriteString(m.Options)
+	}
+	return sb.String()
+}
+
 type RunFlags struct {
 	PublishedPorts PublishedPorts // --publish Port mappings that the container will expose on localhost
 	Networks       []string
+	Volumes        []Volume
+	Mounts         []Mount
 }
 
 func ParseRunFlags(args []string) (*RunFlags, []string, error) {
 	f := RunFlags{}
-	var v string
-	var found bool
-	var err error
+	values, err := flags.GetUnparsedValues("volume", 'v', args)
+	if err != nil {
+		return nil, nil, err
+	}
+	for _, av := range values {
+		vx := strings.Split(av, ":")
+		v := Volume{}
+		switch len(vx) {
+		case 1:
+			v.Target = vx[0]
+		case 2:
+			v.Name = vx[0]
+			v.Target = vx[1]
+		case 3:
+			v.Name = vx[0]
+			v.Target = vx[1]
+			v.Options = vx[2]
+		default:
+			return nil, nil, fmt.Errorf("invalid volume format: %s", av)
+		}
+		f.Volumes = append(f.Volumes, v)
+	}
+	values, err = flags.GetUnparsedValues("mount", 0, args)
+	if err != nil {
+		return nil, nil, err
+	}
+	for _, av := range values {
+		m := Mount{}
+		for _, vx := range strings.Split(av, ",") {
+			kv := strings.Split(vx, "=")
+			if len(kv) != 2 {
+				return nil, nil, fmt.Errorf("invalid mount format: %s", av)
+			}
+			key := kv[0]
+			val := kv[1]
+			switch key {
+			case "type":
+				m.Type = val
+			case "src", "source":
+				m.Source = val
+			case "destination", "dst", "target":
+				m.Target = val
+			default:
+				if len(m.Options) > 0 {
+					m.Options += ","
+				}
+				m.Options += vx
+			}
+		}
+		f.Mounts = append(f.Mounts, m)
+	}
 	for {
-		v, found, args, err = flags.ConsumeUnparsedValue("publish", 'p', false, args)
+		var av string
+		var found bool
+		av, found, args, err = flags.ConsumeUnparsedValue("publish", 'p', false, args)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -33,14 +130,16 @@ func ParseRunFlags(args []string) (*RunFlags, []string, error) {
 			break
 		}
 		var pp PublishedPort
-		pp, err = parsePublishedPort(v)
+		pp, err = parsePublishedPort(av)
 		if err != nil {
 			return nil, nil, fmt.Errorf("invalid port format for --publish: %w", err)
 		}
 		f.PublishedPorts = append(f.PublishedPorts, pp)
 	}
 	for {
-		v, found, args, err = flags.ConsumeUnparsedValue("expose", 0, false, args)
+		var av string
+		var found bool
+		av, found, args, err = flags.ConsumeUnparsedValue("expose", 0, false, args)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -48,16 +147,16 @@ func ParseRunFlags(args []string) (*RunFlags, []string, error) {
 			break
 		}
 		// Convert --expose values to --publish values
-		if strings.Contains(v, ":") {
-			return nil, nil, fmt.Errorf("invalid port format for --expose: %s", v)
+		if strings.Contains(av, ":") {
+			return nil, nil, fmt.Errorf("invalid port format for --expose: %s", av)
 		}
-		proto, portRange := nat.SplitProtoPort(v)
+		proto, portRange := nat.SplitProtoPort(av)
 		start, end, err := nat.ParsePortRange(portRange)
 		if err != nil {
-			return nil, nil, fmt.Errorf("invalid argument for --expose: %s, error: %s", v, err)
+			return nil, nil, fmt.Errorf("invalid argument for --expose: %s, error: %s", av, err)
 		}
 		if start != end {
-			return nil, nil, fmt.Errorf("invalid argument for --expose: %s, error: a range not supported", v)
+			return nil, nil, fmt.Errorf("invalid argument for --expose: %s, error: a range not supported", av)
 		}
 		port := uint16(start)
 		f.PublishedPorts = append(f.PublishedPorts, PublishedPort{
@@ -67,14 +166,16 @@ func ParseRunFlags(args []string) (*RunFlags, []string, error) {
 		})
 	}
 	for {
-		v, found, args, err = flags.ConsumeUnparsedValue("network", 0, false, args)
+		var av string
+		var found bool
+		av, found, args, err = flags.ConsumeUnparsedValue("network", 0, false, args)
 		if err != nil {
 			return nil, nil, err
 		}
 		if !found {
 			break
 		}
-		f.Networks = append(f.Networks, v)
+		f.Networks = append(f.Networks, av)
 	}
 	return &f, args, nil
 }

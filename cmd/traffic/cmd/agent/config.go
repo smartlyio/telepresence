@@ -1,14 +1,11 @@
 package agent
 
 import (
-	"bufio"
 	"context"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
-	"strings"
 
 	"k8s.io/apimachinery/pkg/types"
 
@@ -16,13 +13,12 @@ import (
 	"github.com/telepresenceio/telepresence/v2/pkg/agentconfig"
 	"github.com/telepresenceio/telepresence/v2/pkg/dos"
 	"github.com/telepresenceio/telepresence/v2/pkg/log"
-	"github.com/telepresenceio/telepresence/v2/pkg/slice"
 )
 
 type Config interface {
 	Ext() agentconfig.SidecarExt
 	AgentConfig() *agentconfig.Sidecar
-	HasMounts(ctx context.Context) bool
+	HasRemoteMounts() bool
 	PodName() string
 	PodIP() string
 	PodUID() types.UID
@@ -69,7 +65,8 @@ func LoadConfig(ctx context.Context) (Config, error) {
 	}
 	c.podUID = types.UID(podUID)
 	for _, cn := range sc.Containers {
-		if err := addAppMounts(ctx, cn); err != nil {
+		err = addAppMounts(ctx, sc.MountPolicies, cn)
+		if err != nil {
 			return nil, err
 		}
 	}
@@ -80,10 +77,12 @@ func (c *config) PodUID() types.UID {
 	return c.podUID
 }
 
-func (c *config) HasMounts(ctx context.Context) bool {
+func (c *config) HasRemoteMounts() bool {
 	for _, cn := range c.AgentConfig().Containers {
-		if len(cn.Mounts) > 0 {
-			return true
+		for _, p := range cn.Mounts {
+			if p == agentconfig.MountPolicyRemote || p == agentconfig.MountPolicyRemoteReadOnly {
+				return true
+			}
 		}
 	}
 	return false
@@ -107,7 +106,8 @@ func (c *config) PodIP() string {
 
 // addAppMounts adds each of the mounts present under the containers MountPoint as a
 // symlink under the agentconfig.ExportsMountPoint/<container mount>/.
-func addAppMounts(ctx context.Context, ag *agentconfig.Container) error {
+// Returns MountPolicies keyed by the full path of each mount.
+func addAppMounts(ctx context.Context, mps agentconfig.MountPolicies, ag *agentconfig.Container) error {
 	dlog.Infof(ctx, "Adding exported mounts for container %s", ag.Name)
 	cnMountPoint := filepath.Join(agentconfig.ExportsMountPoint, filepath.Base(ag.MountPoint))
 	if err := dos.Mkdir(ctx, cnMountPoint, 0o700); err != nil {
@@ -123,11 +123,6 @@ func addAppMounts(ctx context.Context, ag *agentconfig.Container) error {
 		}
 	}
 
-	volPaths := dos.Getenv(ctx, ag.EnvPrefix+agentconfig.EnvInterceptMounts)
-	if len(volPaths) > 0 {
-		ag.Mounts = slice.AppendUnique(ag.Mounts, strings.Split(volPaths, ":")...)
-	}
-
 	if appMountsDir, err := dos.Open(ctx, ag.MountPoint); err != nil {
 		if !os.IsNotExist(err) {
 			return err
@@ -139,20 +134,37 @@ func addAppMounts(ctx context.Context, ag *agentconfig.Container) error {
 			return err
 		}
 		for _, mount := range mounts {
-			if err = dos.Symlink(ctx, filepath.Join(ag.MountPoint, mount.Name()), filepath.Join(cnMountPoint, mount.Name())); err != nil {
-				return err
+			switch mps.Get("", "/"+mount.Name()) {
+			case agentconfig.MountPolicyIgnore, agentconfig.MountPolicyLocal:
+			default:
+				subDir := filepath.Join(ag.MountPoint, mount.Name())
+				if err = dos.Symlink(ctx, subDir, filepath.Join(cnMountPoint, mount.Name())); err != nil {
+					return err
+				}
 			}
 		}
 	}
-	return mountVRS(ctx, ag, cnMountPoint)
+	if err := mountVRS(ctx, mps, ag, cnMountPoint); err != nil {
+		return err
+	}
+
+	// Verify that all mounts exists, so that the client doesn't attempt to mount nonexistent paths
+	for path, policy := range ag.Mounts {
+		mp := filepath.Join(cnMountPoint, path)
+		if policy == agentconfig.MountPolicyRemote || policy == agentconfig.MountPolicyRemoteReadOnly {
+			_, err := dos.Stat(ctx, mp)
+			if err != nil {
+				dlog.Infof(ctx, "Failed to stat %q. It will not be exported: %v", mp, err)
+				delete(ag.Mounts, path)
+			}
+		}
+	}
+	return nil
 }
 
-func mountVRS(ctx context.Context, ag *agentconfig.Container, cnMountPoint string) error {
+func mountVRS(ctx context.Context, mps agentconfig.MountPolicies, ag *agentconfig.Container, cnMountPoint string) error {
 	const vrsDir = "/var/run/secrets"
-	// Capture /var/run/secrets subdirs that has been injected but not added by
-	// the injector. That might be because the injector is older than 2.13.3 or
-	// because the injectors reinvocationStrategy is set to "Never".
-	var vrsMounts []string
+	// Capture /var/run/secrets subdirs that has been injected but not added by the injector.
 	vrs, err := dos.ReadDir(ctx, vrsDir)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -161,63 +173,48 @@ func mountVRS(ctx context.Context, ag *agentconfig.Container, cnMountPoint strin
 		return err
 	}
 
-	hasMount := func(m string) bool {
-		for _, em := range ag.Mounts {
-			if strings.HasPrefix(em, m) {
-				return true
-			}
-		}
-		return false
-	}
-	anns, err := readAnnotations(ctx)
-	if err != nil {
-		dlog.Warnf(ctx, "failed to read annotations: %v", err)
-	}
-
-	ignored := agentconfig.GetIgnoredVolumeMounts(anns)
-	for _, vr := range vrs {
-		if vr.IsDir() {
-			subDir := filepath.Join(vrsDir, vr.Name())
-			if !hasMount(subDir) && !ignored.IsVolumeIgnored("", subDir) {
-				ag.Mounts = append(ag.Mounts, subDir)
-				vrsMounts = append(vrsMounts, subDir)
-			}
-		}
-	}
-	if len(vrsMounts) == 0 {
-		return nil
-	}
-
 	vrsExportDir := filepath.Join(cnMountPoint, vrsDir)
-	if err := dos.MkdirAll(ctx, vrsExportDir, 0o700); err != nil {
-		return err
-	}
-	for _, mount := range vrsMounts {
-		newName := filepath.Join(vrsExportDir, filepath.Base(mount))
-		if err = dos.Symlink(ctx, mount, newName); err != nil {
-			dlog.Warnf(ctx, "can't symlink %s to %s", mount, newName)
+	hasVrsExportDir := false
+	for _, vr := range vrs {
+		if !vr.IsDir() {
+			continue
+		}
+		subDir := filepath.Join(vrsDir, vr.Name())
+		mp := mps.Get("", subDir)
+		switch mp {
+		case agentconfig.MountPolicyIgnore:
+			continue
+		case agentconfig.MountPolicyLocal:
+		case agentconfig.MountPolicyRemote, agentconfig.MountPolicyRemoteReadOnly:
+			if _, err = dos.Stat(ctx, filepath.Join(vrsExportDir, vr.Name())); err == nil {
+				break
+			}
+			if !hasVrsExportDir {
+				if err = os.MkdirAll(vrsExportDir, 0o700); err != nil {
+					return err
+				}
+				hasVrsExportDir = true
+			}
+			newName := filepath.Join(vrsExportDir, vr.Name())
+			if err = dos.Symlink(ctx, subDir, newName); err != nil {
+				return fmt.Errorf("can't symlink %s to %s: %v", subDir, newName, err)
+			}
+		}
+		found := false
+		sd := subDir
+		for len(sd) > 1 && sd[0] == '/' {
+			if _, found = ag.Mounts[sd]; found {
+				break
+			}
+			sd = filepath.Dir(sd)
+		}
+		if !found {
+			if ag.Mounts == nil {
+				ag.Mounts = agentconfig.MountPolicies{subDir: mp}
+			} else {
+				ag.Mounts[subDir] = mp
+			}
 		}
 	}
 	return nil
-}
-
-func readAnnotations(ctx context.Context) (map[string]string, error) {
-	af, err := dos.Open(ctx, filepath.Join(agentconfig.AnnotationMountPoint, "annotations"))
-	if err != nil {
-		return nil, err
-	}
-	defer af.Close()
-	r := bufio.NewScanner(af)
-	m := make(map[string]string)
-	for r.Scan() {
-		vs := strings.SplitN(r.Text(), "=", 2)
-		if len(vs) == 2 {
-			av := vs[1]
-			if uq, err := strconv.Unquote(av); err == nil {
-				av = uq
-			}
-			m[vs[0]] = av
-		}
-	}
-	return m, nil
 }

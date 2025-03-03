@@ -16,7 +16,7 @@ raw markdown version, more bells and whistles at [telepresence.io](https://telep
   - [Intercepts](concepts/intercepts.md)
 - How do I...
   - [Code and debug an application locally](howtos/engage.md)
-  - [Using Telepresence with Docker](howtos/docker.md)
+  - [Use Telepresence with Docker](howtos/docker.md)
   - [Work with large clusters](howtos/large-clusters.md)
   - [Host a cluster in Docker or a VM](howtos/cluster-in-vm.md)
 - Technical reference

@@ -11,6 +11,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime/debug"
+	"sort"
 	"strings"
 	"time"
 
@@ -40,7 +41,7 @@ var DisplayName = "OSS Traffic Agent" //nolint:gochecknoglobals // extension poi
 // AppEnvironment returns the environment visible to this agent together with environment variables
 // explicitly declared for the app container and minus the environment variables provided by this
 // config.
-func AppEnvironment(ctx context.Context, ag *agentconfig.Container) (map[string]string, error) {
+func AppEnvironment(ctx context.Context, mounts agentconfig.MountPolicies, ag *agentconfig.Container) (map[string]string, error) {
 	osEnv := dos.Environ(ctx)
 	prefix := agentconfig.EnvPrefixApp + ag.EnvPrefix
 	fullEnv := make(map[string]string, len(osEnv))
@@ -76,8 +77,25 @@ func AppEnvironment(ctx context.Context, ag *agentconfig.Container) (map[string]
 		}
 	}
 	fullEnv[agentconfig.EnvInterceptContainer] = ag.Name
-	if len(ag.Mounts) > 0 {
-		fullEnv[agentconfig.EnvInterceptMounts] = strings.Join(ag.Mounts, ":")
+	if len(mounts) > 0 {
+		var localMounts, remoteMounts []string
+		for path, policy := range mounts {
+			switch policy {
+			case agentconfig.MountPolicyIgnore:
+			case agentconfig.MountPolicyRemote, agentconfig.MountPolicyRemoteReadOnly:
+				remoteMounts = append(remoteMounts, path)
+			case agentconfig.MountPolicyLocal:
+				localMounts = append(localMounts, path)
+			}
+		}
+		if len(localMounts) > 0 {
+			sort.Strings(localMounts)
+			fullEnv[agentconfig.EnvLocalMounts] = strings.Join(localMounts, ":")
+		}
+		if len(remoteMounts) > 0 {
+			sort.Strings(remoteMounts)
+			fullEnv[agentconfig.EnvInterceptMounts] = strings.Join(remoteMounts, ":")
+		}
 	}
 	return fullEnv, nil
 }
@@ -278,7 +296,7 @@ func StartServices(ctx context.Context, g *dgroup.Group, config Config, srv Stat
 
 	sftpPortCh := make(chan uint16)
 	ftpPortCh := make(chan uint16)
-	if config.HasMounts(ctx) {
+	if config.HasRemoteMounts() {
 		g.Go("sftp-server", func(ctx context.Context) error {
 			return sftpServer(ctx, sftpPortCh)
 		})
@@ -316,13 +334,15 @@ func StartServices(ctx context.Context, g *dgroup.Group, config Config, srv Stat
 
 	containers := make(map[string]*rpc.AgentInfo_ContainerInfo, len(ac.Containers))
 	for _, cn := range ac.Containers {
-		env, err := AppEnvironment(ctx, cn)
+		appMounts := cn.Mounts
+		env, err := AppEnvironment(ctx, appMounts, cn)
 		if err != nil {
 			return nil, err
 		}
 		containers[cn.Name] = &rpc.AgentInfo_ContainerInfo{
 			Environment: env,
 			MountPoint:  filepath.Join(agentconfig.ExportsMountPoint, filepath.Base(cn.MountPoint)),
+			Mounts:      appMounts.ToRPC(),
 		}
 	}
 

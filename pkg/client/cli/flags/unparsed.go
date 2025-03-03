@@ -15,6 +15,24 @@ func GetUnparsedValue(longForm string, shortForm byte, isBool bool, args []strin
 	return v, found, err
 }
 
+// GetUnparsedValues parses the given args for matching options, which may be repeated. The string values of the
+// option are collected into a slice.
+func GetUnparsedValues(longForm string, shortForm byte, args []string) ([]string, error) {
+	args = slices.Clone(args)
+	var values []string
+	for {
+		v, found, _, err := ConsumeUnparsedValue(longForm, shortForm, false, args)
+		if err != nil {
+			return nil, err
+		}
+		if !found {
+			break
+		}
+		values = append(values, v)
+	}
+	return values, nil
+}
+
 // ConsumeUnparsedValue parses the given args for a matching option. If found, the option and value
 // is removed from args. The string value of the option, a boolean indicating if the option was found,
 // the possibly modified args array is returned. The function may also return an error for a malformed

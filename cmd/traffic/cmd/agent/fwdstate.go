@@ -144,6 +144,7 @@ func (fs *fwdState) HandleIntercepts(ctx context.Context, cepts []*manager.Inter
 					FtpPort:           int32(fs.FtpPort()),
 					SftpPort:          int32(fs.SftpPort()),
 					MountPoint:        cs.MountPoint(),
+					Mounts:            cs.Mounts().ToRPC(),
 					MechanismArgsDesc: "all TCP connections",
 					Environment:       cs.Env(),
 				})
@@ -163,6 +164,7 @@ func (fs *fwdState) HandleIntercepts(ctx context.Context, cepts []*manager.Inter
 					FtpPort:           int32(fs.FtpPort()),
 					SftpPort:          int32(fs.SftpPort()),
 					MountPoint:        cs.MountPoint(),
+					Mounts:            cs.Mounts().ToRPC(),
 					MechanismArgsDesc: "all TCP connections",
 					Environment:       cs.Env(),
 				})

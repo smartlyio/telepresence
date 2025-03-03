@@ -388,7 +388,12 @@ func addAgentContainer(
 	config *agentconfig.Sidecar,
 	patches PatchOps,
 ) (PatchOps, map[string]string) {
-	acn, replaceAnnotations := agentconfig.AgentContainer(ctx, pod, config)
+	ab := agentconfig.ContainerBuilder{
+		MountPolicies: managerutil.GetEnv(ctx).AgentMountPolicies,
+		Pod:           pod,
+		Config:        config,
+	}
+	acn, replaceAnnotations := ab.AgentContainer(ctx)
 	if acn == nil {
 		return patches, replaceAnnotations
 	}

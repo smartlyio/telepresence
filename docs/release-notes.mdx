@@ -81,6 +81,16 @@ namespaceSelector:
   </Body>
 </Note>
 <Note>
+	<Title type="feature">Improved control over how remote volumes are mounted using mount policies</Title>
+	<Body>
+Mount policies, that affects how the telepresence traffic-agent shares the pod's volumes, and also how the
+client will mount them, can now be provided using the Helm chart value `agent.mountPolicies` or as JSON
+object in the workload annotation `telepresence.io/mount-policies`. A mount policy is applied to a volume
+or to all paths matching a path-prefix (distinguished by checking if first character is a '/'), and can
+be one of `Ignore`, `Local`, `Remote`, or `RemoteReadOnly`.
+  </Body>
+</Note>
+<Note>
 	<Title type="feature">List output includes workload kind.</Title>
 	<Body>
 The output of the `telepresence list` command will now include the workload kind (deployment, replicaset, statefulset, or rollout) in all entries.

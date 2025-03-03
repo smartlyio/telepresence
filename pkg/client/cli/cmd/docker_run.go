@@ -71,11 +71,11 @@ func parseFlags(cmd *cobra.Command, args []string) (*cliDocker.RunFlags, []strin
 	if err != nil {
 		return nil, nil, err
 	}
-	networkFlags, args, err := cliDocker.ParseRunFlags(args)
+	runFlags, args, err := cliDocker.ParseRunFlags(args)
 	if err != nil {
 		return nil, nil, err
 	}
-	return networkFlags, args, nil
+	return runFlags, args, nil
 }
 
 func runDockerRunCLI(cmd *cobra.Command, args []string) error {
@@ -146,8 +146,9 @@ func runDockerRun(cmd *cobra.Command, args []string) error {
 	ctx = docker.EnableClient(ctx)
 
 	var exited, signalled atomic.Bool
+	done := make(chan error, 1)
 	if !tty {
-		go cliDocker.EnsureStopContainer(ctx, containerID, nil, &exited, &signalled)
+		go cliDocker.EnsureStopContainer(ctx, containerID, nil, &exited, &signalled, done)
 	}
 
 	if len(opts.Networks) > 0 {
@@ -160,8 +161,13 @@ func runDockerRun(cmd *cobra.Command, args []string) error {
 
 	err = cc.Wait()
 	exited.Store(true)
+	cancel()
 	if signalled.Load() {
 		err = nil
 	}
-	return err
+	waitErr := <-done
+	if err == nil {
+		err = waitErr
+	}
+	return errcat.NoDaemonLogs.New(err)
 }

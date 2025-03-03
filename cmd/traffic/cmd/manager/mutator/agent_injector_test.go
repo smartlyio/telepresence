@@ -555,7 +555,10 @@ matchExpressions:
 						Name:       "some-container",
 						EnvPrefix:  "A_",
 						MountPoint: "/tel_app_mounts/some-container",
-						Mounts:     []string{"/var/run/secrets/kubernetes.io/serviceaccount"},
+						Mounts: map[string]agentconfig.MountPolicy{
+							"/var/run/secrets/kubernetes.io/serviceaccount": agentconfig.MountPolicyRemote,
+						},
+						MountPaths: []string{"/var/run/secrets/kubernetes.io/serviceaccount"},
 					},
 				},
 			},
@@ -606,7 +609,10 @@ matchExpressions:
 						},
 						EnvPrefix:  "A_",
 						MountPoint: "/tel_app_mounts/some-container",
-						Mounts:     []string{"/var/run/secrets/kubernetes.io/serviceaccount"},
+						Mounts: map[string]agentconfig.MountPolicy{
+							"/var/run/secrets/kubernetes.io/serviceaccount": agentconfig.MountPolicyRemote,
+						},
+						MountPaths: []string{"/var/run/secrets/kubernetes.io/serviceaccount"},
 					},
 				},
 			},
@@ -707,7 +713,11 @@ matchExpressions:
 						},
 						EnvPrefix:  "A_",
 						MountPoint: "/tel_app_mounts/named-port-container",
-						Mounts:     []string{"/home/bob", "/var/run/secrets/kubernetes.io/serviceaccount"},
+						Mounts: map[string]agentconfig.MountPolicy{
+							"/home/bob": agentconfig.MountPolicyRemote,
+							"/var/run/secrets/kubernetes.io/serviceaccount": agentconfig.MountPolicyRemote,
+						},
+						MountPaths: []string{"/home/bob", "/var/run/secrets/kubernetes.io/serviceaccount"},
 					},
 					{
 						Name: "numeric-port-container",
@@ -770,7 +780,10 @@ matchExpressions:
 						},
 						EnvPrefix:  "A_",
 						MountPoint: "/tel_app_mounts/multi-port-container",
-						Mounts:     []string{"/home/bob"},
+						Mounts: map[string]agentconfig.MountPolicy{
+							"/home/bob": agentconfig.MountPolicyRemote,
+						},
+						MountPaths: []string{"/home/bob"},
 					},
 				},
 			},
@@ -804,7 +817,10 @@ matchExpressions:
 						},
 						EnvPrefix:  "A_",
 						MountPoint: "/tel_app_mounts/http-container",
-						Mounts:     []string{"/home/bob"},
+						Mounts: map[string]agentconfig.MountPolicy{
+							"/home/bob": agentconfig.MountPolicyRemote,
+						},
+						MountPaths: []string{"/home/bob"},
 					},
 					{
 						Name: "grpc-container",
@@ -1947,8 +1963,6 @@ matchExpressions:
         fieldRef:
           apiVersion: v1
           fieldPath: metadata.name
-    - name: A_TELEPRESENCE_MOUNTS
-      value: /var/run/secrets/kubernetes.io/serviceaccount
     image: ghcr.io/telepresenceio/tel2:2.13.3
     name: traffic-agent
     ports:

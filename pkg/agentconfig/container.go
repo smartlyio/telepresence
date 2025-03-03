@@ -7,23 +7,24 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/blang/semver/v4"
 	"github.com/go-json-experiment/json"
 	core "k8s.io/api/core/v1"
 
 	"github.com/datawire/dlib/dlog"
 )
 
-// AgentContainer will return a configured traffic-agent.
-func AgentContainer(
-	ctx context.Context,
-	pod *core.Pod,
-	config *Sidecar,
-) (*core.Container, map[string]string) {
-	ports := make([]core.ContainerPort, 0, 5)
-	confCns := ConfiguredContainers(ctx, pod, config)
+type ContainerBuilder struct {
+	MountPolicies MountPolicies
+	Pod           *core.Pod
+	Config        *Sidecar
+}
 
-	eachConfiguredContainer(confCns, config, func(app *core.Container, cc *Container) {
+// AgentContainer will return a configured traffic-agent.
+func (a *ContainerBuilder) AgentContainer(ctx context.Context) (*core.Container, map[string]string) {
+	ports := make([]core.ContainerPort, 0, 5)
+	confCns := a.configuredContainers(ctx)
+
+	a.eachConfiguredContainer(confCns, func(app *core.Container, cc *Container) {
 		if cc.Replace == ReplacePolicyContainer {
 			// Simply inherit the ports of the replaced container
 			ports = append(ports, app.Ports...)
@@ -38,16 +39,16 @@ func AgentContainer(
 		}
 	})
 
-	evs := make([]core.EnvVar, 0, len(config.Containers)*5)
-	efs := make([]core.EnvFromSource, 0, len(config.Containers)*3)
-	eachConfiguredContainer(confCns, config, func(app *core.Container, cc *Container) {
+	evs := make([]core.EnvVar, 0, len(a.Config.Containers)*5)
+	efs := make([]core.EnvFromSource, 0, len(a.Config.Containers)*3)
+	a.eachConfiguredContainer(confCns, func(app *core.Container, cc *Container) {
 		evs = appendAppContainerEnv(app, cc, evs)
 		efs = appendAppContainerEnvFrom(app, cc, efs)
 	})
-	if config.APIPort > 0 {
+	if a.Config.APIPort > 0 {
 		evs = append(evs, core.EnvVar{
 			Name:  EnvAPIPort,
-			Value: strconv.Itoa(int(config.APIPort)),
+			Value: strconv.Itoa(int(a.Config.APIPort)),
 		})
 	}
 	evs = append(evs,
@@ -88,25 +89,10 @@ func AgentContainer(
 			},
 		})
 
-	mounts := make([]core.VolumeMount, 0, len(config.Containers)*3)
-	var agentVersion semver.Version
-	if sep := strings.LastIndexByte(config.AgentImage, ':'); sep > 0 {
-		var err error
-		if agentVersion, err = semver.Parse(config.AgentImage[sep+1:]); err != nil {
-			dlog.Errorf(ctx, "unable to parse agent version from image name %s", config.AgentImage)
-		}
-	}
-	eachConfiguredContainer(confCns, config, func(app *core.Container, cc *Container) {
-		var volPaths []string
-		volPaths, mounts = appendAppContainerVolumeMounts(app, cc, mounts, pod.ObjectMeta.Annotations, agentVersion)
-		if len(volPaths) > 0 {
-			evs = append(evs, core.EnvVar{
-				Name:  cc.EnvPrefix + EnvInterceptMounts,
-				Value: strings.Join(volPaths, ":"),
-			})
-		}
+	mounts := make([]core.VolumeMount, 0, len(a.Config.Containers)*3)
+	a.eachConfiguredContainer(confCns, func(app *core.Container, cc *Container) {
+		mounts = a.appendVolumeMounts(app, cc, mounts)
 	})
-
 	mounts = append(mounts,
 		core.VolumeMount{
 			Name:      AnnotationVolumeName,
@@ -121,26 +107,26 @@ func AgentContainer(
 			MountPath: TempMountPoint,
 		},
 	)
-	if _, ok := pod.ObjectMeta.Annotations[LegacyTerminatingTLSSecretAnnotation]; ok {
+	if _, ok := a.Pod.ObjectMeta.Annotations[LegacyTerminatingTLSSecretAnnotation]; ok {
 		mounts = append(mounts, core.VolumeMount{
 			Name:      TerminatingTLSVolumeName,
 			MountPath: TerminatingTLSMountPoint,
 		})
 	}
-	if _, ok := pod.ObjectMeta.Annotations[LegacyOriginatingTLSSecretAnnotation]; ok {
+	if _, ok := a.Pod.ObjectMeta.Annotations[LegacyOriginatingTLSSecretAnnotation]; ok {
 		mounts = append(mounts, core.VolumeMount{
 			Name:      OriginatingTLSVolumeName,
 			MountPath: OriginatingTLSMountPoint,
 		})
 	}
-	if _, ok := pod.ObjectMeta.Annotations[TerminatingTLSSecretAnnotation]; ok {
+	if _, ok := a.Pod.ObjectMeta.Annotations[TerminatingTLSSecretAnnotation]; ok {
 		mounts = append(mounts, core.VolumeMount{
 			Name:      TerminatingTLSVolumeName,
 			MountPath: TerminatingTLSMountPoint,
 		})
 	}
 
-	if _, ok := pod.ObjectMeta.Annotations[OriginatingTLSSecretAnnotation]; ok {
+	if _, ok := a.Pod.ObjectMeta.Annotations[OriginatingTLSSecretAnnotation]; ok {
 		mounts = append(mounts, core.VolumeMount{
 			Name:      OriginatingTLSVolumeName,
 			MountPath: OriginatingTLSMountPoint,
@@ -152,17 +138,17 @@ func AgentContainer(
 	}
 
 	annotations := make(map[string]string)
-	eachConfiguredContainer(confCns, config, func(app *core.Container, cc *Container) {
+	a.eachConfiguredContainer(confCns, func(app *core.Container, cc *Container) {
 		if cc.Replace == ReplacePolicyContainer {
 			cnJson, err := json.Marshal(app)
 			if err != nil {
-				dlog.Errorf(ctx, "unable to marshal container %s.%s/%s to json: %v", config.WorkloadName, config.Namespace, app.Name, err)
-			} else {
-				annotations[ReplaceAnnotationKey(cc.Name)] = string(cnJson)
+				dlog.Errorf(ctx, "unable to marshal container %s.%s/%s to json: %v", a.Config.WorkloadName, a.Config.Namespace, app.Name, err)
 			}
+			annotations[ReplaceAnnotationKey(cc.Name)] = string(cnJson)
 		}
 	})
-	cfg, _ := MarshalTight(config)
+
+	cfg, _ := MarshalTight(a.Config)
 	annotations[ConfigAnnotation] = cfg
 
 	if len(ports) == 0 {
@@ -170,7 +156,7 @@ func AgentContainer(
 	}
 	ac := &core.Container{
 		Name:         ContainerName,
-		Image:        config.AgentImage,
+		Image:        a.Config.AgentImage,
 		Args:         []string{"agent"},
 		Ports:        ports,
 		Env:          evs,
@@ -183,19 +169,18 @@ func AgentContainer(
 				},
 			},
 		},
-		ImagePullPolicy: core.PullPolicy(config.PullPolicy),
+		ImagePullPolicy: core.PullPolicy(a.Config.PullPolicy),
 	}
-	if r := config.Resources; r != nil {
+	if r := a.Config.Resources; r != nil {
 		ac.Resources = *r
 	}
 
-	appSc := config.SecurityContext
+	appSc := a.Config.SecurityContext
 	if appSc == nil {
 		var err error
 		// Assign the security context of the first container to the traffic agent.
-		appSc, err = firstAppSecurityContext(pod, config)
+		appSc, err = a.firstAppSecurityContext()
 		if err != nil {
-			dlog.Error(ctx, err)
 			return nil, nil
 		}
 	}
@@ -210,9 +195,9 @@ func ReplaceAnnotationKey(cn string) string {
 
 // Find the security context of the first container (with both intercepts and a set security context) and ensure
 // that any env interpolations in it are prefixed with the env-prefix of the corresponding config container.
-func firstAppSecurityContext(pod *core.Pod, config *Sidecar) (*core.SecurityContext, error) {
-	cns := pod.Spec.Containers
-	for _, cc := range config.Containers {
+func (a *ContainerBuilder) firstAppSecurityContext() (*core.SecurityContext, error) {
+	cns := a.Pod.Spec.Containers
+	for _, cc := range a.Config.Containers {
 		if len(cc.Intercepts) > 0 {
 			for i := range cns {
 				app := &cns[i]
@@ -238,18 +223,18 @@ func firstAppSecurityContext(pod *core.Pod, config *Sidecar) (*core.SecurityCont
 	return nil, nil
 }
 
-// ConfiguredContainers will find each container in the given config and match it against a container
+// configuredContainers will find each container in the given config and match it against a container
 // in the pod using its name. The returned slice is guaranteed to use the same index as the Sidecar.Containers slice.
-func ConfiguredContainers(ctx context.Context, pod *core.Pod, config *Sidecar) []*core.Container {
-	cns := pod.Spec.Containers
-	result := make([]*core.Container, len(config.Containers))
-	for ci, cc := range config.Containers {
+func (a *ContainerBuilder) configuredContainers(ctx context.Context) []*core.Container {
+	cns := a.Pod.Spec.Containers
+	result := make([]*core.Container, len(a.Config.Containers))
+	for ci, cc := range a.Config.Containers {
 		for i := range cns {
 			app := &cns[i]
 			if app.Name == ContainerName {
 				// The pod might hold JSON of replaced containers from an earlier patch
 				annName := ReplacedContainerAnnotationPrefix + cc.Name
-				if appJson, ok := pod.ObjectMeta.Annotations[annName]; ok {
+				if appJson, ok := a.Pod.ObjectMeta.Annotations[annName]; ok {
 					var cn core.Container
 					err := json.Unmarshal([]byte(appJson), &cn)
 					if err != nil {
@@ -267,51 +252,12 @@ func ConfiguredContainers(ctx context.Context, pod *core.Pod, config *Sidecar) [
 	return result
 }
 
-func eachConfiguredContainer(configureContainers []*core.Container, config *Sidecar, f func(*core.Container, *Container)) {
+func (a *ContainerBuilder) eachConfiguredContainer(configureContainers []*core.Container, f func(*core.Container, *Container)) {
 	for i, cn := range configureContainers {
 		if cn != nil {
-			f(cn, config.Containers[i])
+			f(cn, a.Config.Containers[i])
 		}
 	}
-}
-
-func appendAppContainerVolumeMounts(
-	app *core.Container,
-	cc *Container,
-	mounts []core.VolumeMount,
-	annotations map[string]string,
-	av semver.Version,
-) ([]string, []core.VolumeMount) {
-	ignoredVolumeMounts := GetIgnoredVolumeMounts(annotations)
-
-	// Older agents will error if we include /var/run/secrets/ volumes here, so we don't.
-	stripVarRunSecret := false
-	if av.Major == 1 && (av.Minor < 13 || av.Minor == 13 && av.Patch <= 13) {
-		// Smart agent <=1.13.13
-		stripVarRunSecret = true
-	}
-	if av.Major == 2 && (av.Minor < 13 || av.Minor == 13 && av.Patch <= 2) {
-		// OSS agent <=2.13.2
-		stripVarRunSecret = true
-	}
-
-	volPaths := make([]string, 0, len(app.VolumeMounts))
-	pfx := EnvPrefixApp + cc.EnvPrefix
-	for _, m := range app.VolumeMounts {
-		if ignoredVolumeMounts.IsVolumeIgnored(m.Name, m.MountPath) {
-			continue
-		}
-		if stripVarRunSecret && strings.HasPrefix(m.MountPath, "/var/run/secrets/") {
-			continue
-		}
-		volPaths = append(volPaths, m.MountPath)
-		m.Name = prefixInterpolated(m.Name, pfx)
-		m.MountPath = prefixInterpolated(cc.MountPoint+"/"+strings.TrimPrefix(m.MountPath, "/"), pfx)
-		m.SubPath = prefixInterpolated(m.SubPath, pfx)
-		m.SubPathExpr = prefixInterpolated(m.SubPathExpr, pfx)
-		mounts = append(mounts, m)
-	}
-	return volPaths, mounts
 }
 
 // prefixInterpolated will prefix all environment variable names that are referenced using $(NAME) expressions
