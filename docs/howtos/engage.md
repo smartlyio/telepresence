@@ -57,7 +57,7 @@ in several examples. OpenShift users can substitute oc [commands instead](https:
 This guide assumes you have an application represented by a Kubernetes deployment and service accessible publicly by an ingress controller,
 and that you can run a copy of that application on your laptop.
 
-## Replace the cluster container
+## Replace your Container
 
 This approach offers the benefit of direct cluster connectivity from your workstation, simplifying debugging and
 modification of your application within its familiar environment. However, it requires root access to configure
@@ -134,7 +134,7 @@ You can now:
 
 6. You end the replace operation with the command `telepresence leave example-app --container echo-server`
 
-## Ingest the cluster container
+## Ingest your Container
 
 In some situations, you want to work and debug the code locally, and you want it to be able to access other services in the cluster,
 but you don't wish to interfere with the targeted workload. This is where the `telepresence ingest` command comes into play. Just
