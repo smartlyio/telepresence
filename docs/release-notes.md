@@ -117,7 +117,7 @@ Very few systems experience a DNS recursion lookup problem. It can only occur wh
 ## <div style="display:flex;"><img src="images/change.png" alt="change" style="width:30px;height:fit-content;"/><div style="display:flex;margin-left:7px;">Trigger the mutating webhook with Kubernetes eviction objects instead of patching workloads.</div></div>
 <div style="margin-left: 15px">
 
-Instead of patching workloads, or scaling the workloads down to zero and up again, Telepresence will now create policy/v1 Eviction objects to trigger the mutating webhook. This causes a slight change in the traffic-manager RBAC. The `patch` permissions are no longer needed. Instead, the traffic-manager must be able to create "pod/eviction" objects.
+Telepresence will now attempt to evict pods in order to trigger the traffic-agent's injection or removal, and revert to patching workloads if evictions are prevented by the pod's disruption budget. This causes a slight change in the traffic-manager RBAC, as the traffic-manager must be able to create "pod/eviction" objects.
 </div>
 
 ## <div style="display:flex;"><img src="images/change.png" alt="change" style="width:30px;height:fit-content;"/><div style="display:flex;margin-left:7px;">The telepresence-agents configmap is no longer used.</div></div>

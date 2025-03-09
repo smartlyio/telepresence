@@ -71,13 +71,6 @@ kind: ClusterRole
 metadata:
   name: traffic-manager
 rules:
-  - apiGroups: [""]
-    resources: ["configmaps"]
-    verbs: ["create"]
-  - apiGroups: [""]
-    resources: ["configmaps"]
-    verbs: ["get", "list", "watch"]
-    resourceNames: ["telepresence-agents"]
   - apiGroups: ["apps"]
     resources: ["deployments", "replicasets", "statefulsets"]
     verbs: ["get", "list", "watch"]
@@ -89,18 +82,22 @@ rules:
     verbs: ["get", "watch"]
   - apiGroups: [""]
     resources: ["pods"]
-    verbs: ["get", "list", "watch"]
+    verbs: ["get", "list", "watch"] # patch not needed when agentInjector.enabled is set to false
 
   # If argoRollouts.enabled is set to true
   - apiGroups: ["argoproj.io"]
     resources: ["rollouts"]
     verbs: ["get", "list", "watch"]
 
+  # When using podCIDRStrategy nodePodCIDRs
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list", "watch"]
+
   # The following is not needed when agentInjector.enabled is set to false
   - apiGroups: [""]
-    resources: ["configmaps"]
-    verbs: ["update", "delete"]
-    resourceNames: ["telepresence-agents"]
+    resources: ["pods"]
+    verbs: ["patch"]
   - apiGroups: ["apps"]
     resources: ["deployments", "replicasets", "statefulsets"]
     verbs: ["patch"]
@@ -108,11 +105,6 @@ rules:
   - apiGroups: ["argoproj.io"]
     resources: ["rollouts"]
     verbs: ["patch"]
-
-  # When using podCIDRStrategy nodePodCIDRs
-  - apiGroups: [""]
-    resources: ["nodes"]
-    verbs: ["get", "list", "watch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding

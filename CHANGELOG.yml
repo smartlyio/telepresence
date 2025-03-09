@@ -130,10 +130,9 @@ items:
       - type: change
         title: Trigger the mutating webhook with Kubernetes eviction objects instead of patching workloads.
         body: >-
-          Instead of patching workloads, or scaling the workloads down to zero and up again, Telepresence will now
-          create policy/v1 Eviction objects to trigger the mutating webhook. This causes a slight change in the
-          traffic-manager RBAC. The `patch` permissions are no longer needed. Instead, the traffic-manager must be
-          able to create "pod/eviction" objects.
+          Telepresence will now attempt to evict pods in order to trigger the traffic-agent's injection or removal, and
+          revert to patching workloads if evictions are prevented by the pod's disruption budget. This causes a slight
+          change in the traffic-manager RBAC, as the traffic-manager must be able to create "pod/eviction" objects.
       - type: change
         title: The telepresence-agents configmap is no longer used.
         body: >-
