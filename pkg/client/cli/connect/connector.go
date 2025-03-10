@@ -20,6 +20,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/datawire/dlib/dlog"
 	"github.com/telepresenceio/telepresence/rpc/v2/common"
@@ -34,6 +35,7 @@ import (
 	"github.com/telepresenceio/telepresence/v2/pkg/errcat"
 	"github.com/telepresenceio/telepresence/v2/pkg/filelocation"
 	"github.com/telepresenceio/telepresence/v2/pkg/ioutil"
+	"github.com/telepresenceio/telepresence/v2/pkg/k8sapi"
 	"github.com/telepresenceio/telepresence/v2/pkg/proc"
 )
 
@@ -252,7 +254,20 @@ func launchConnectorDaemon(ctx context.Context, connectorDaemon string, required
 			_ = fh.Close()
 		}
 		ctx = docker.EnableClient(ctx)
-		conn, err = docker.LaunchDaemon(ctx, daemonID)
+
+		// An initialized kubernetes interface is required by LaunchDaemon, because it is necessary
+		// when checking if the containerized daemon is connecting to a k3s control plane node.
+		var kc *client.Kubeconfig
+		ctx, kc, err = client.NewKubeconfig(ctx, cr.KubeFlags, cr.ManagerNamespace)
+		if err != nil {
+			return ctx, err
+		}
+		var ki *kubernetes.Clientset
+		ki, err = kubernetes.NewForConfig(kc.RestConfig)
+		if err != nil {
+			return ctx, err
+		}
+		conn, err = docker.LaunchDaemon(k8sapi.WithK8sInterface(ctx, ki), daemonID)
 	} else {
 		args := []string{connectorDaemon, "connector-foreground"}
 		if cr.UserDaemonProfilingPort > 0 {

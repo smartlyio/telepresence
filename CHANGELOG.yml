@@ -145,6 +145,19 @@ items:
           The clusterID was deprecated some time ago, and replaced by the ID of the namespace where the traffic-manager
           is installed.
       - type: bugfix
+        title: Make telepresence connect --docker work with Rancher Desktop
+        body: >-
+          Rancher Desktop will start a K3s control-plane and typically expose the
+          Kubernetes API server at `127.0.0.1:6443`. Telepresence can connect to
+          this cluster when running on the host, but the address is not available
+          when connecting in docker mode.
+  
+          The problem is solved by ensuring that the Kubernetes API server address used when
+          doing a `telepresence connect --docker` is swapped from 127.0.0.1 to the
+          internal address of the control-plane node. This works because that
+          address is available to other docker containers, and the Kubernetes API
+          server is configured with a certificate that accepts it.
+      - type: bugfix
         title: Rename charts/telepresence to charts/telepresence-oss.
         body: >-
           The Helm chart name "telepresence-oss" was inconsistent with its contained folder "telepresence". As a result,

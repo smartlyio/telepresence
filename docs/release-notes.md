@@ -126,6 +126,13 @@ The traffic-agent configuration was moved into a pod-annotation. This avoids syn
 The clusterID was deprecated some time ago, and replaced by the ID of the namespace where the traffic-manager is installed.
 </div>
 
+## <div style="display:flex;"><img src="images/bugfix.png" alt="bugfix" style="width:30px;height:fit-content;"/><div style="display:flex;margin-left:7px;">Make telepresence connect --docker work with Rancher Desktop</div></div>
+<div style="margin-left: 15px">
+
+Rancher Desktop will start a K3s control-plane and typically expose the Kubernetes API server at `127.0.0.1:6443`. Telepresence can connect to this cluster when running on the host, but the address is not available when connecting in docker mode.
+The problem is solved by ensuring that the Kubernetes API server address used when doing a `telepresence connect --docker` is swapped from 127.0.0.1 to the internal address of the control-plane node. This works because that address is available to other docker containers, and the Kubernetes API server is configured with a certificate that accepts it.
+</div>
+
 ## <div style="display:flex;"><img src="images/bugfix.png" alt="bugfix" style="width:30px;height:fit-content;"/><div style="display:flex;margin-left:7px;">Rename charts/telepresence to charts/telepresence-oss.</div></div>
 <div style="margin-left: 15px">
 
