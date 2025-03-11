@@ -21,8 +21,8 @@
 - title: How do I...
   items:
     - title: Code and debug an application locally
-      link: howtos/intercepts
-    - title: Using Telepresence with Docker
+      link: howtos/engage
+    - title: Use Telepresence with Docker
       link: howtos/docker
     - title: Work with large clusters
       link: howtos/large-clusters

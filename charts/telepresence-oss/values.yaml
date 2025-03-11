@@ -127,6 +127,8 @@ agentInjector:
 agent:
   appProtocolStrategy: http2Probe
   port: 9900
+  mountPolicies:
+    "/tmp": Local
   image:
     pullPolicy: IfNotPresent
 

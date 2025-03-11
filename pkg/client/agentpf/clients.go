@@ -222,8 +222,13 @@ func (ac *client) startDialWatcherReady(ctx context.Context, cli agent.AgentClie
 			dlog.Error(ctx, err)
 		}
 		ai := ac.info
-		dlog.Debugf(ctx, "Deleting agent %s.%s. DialWaitLoop ended", ai.PodName, ai.Namespace)
-		ac.cancel()
+		dlog.Debugf(ctx, "DialWaitLoop ended for %s.%s", ai.PodName, ai.Namespace)
+		ac.RLock()
+		dwCancel := ac.cancelDialWatch
+		ac.RUnlock()
+		if dwCancel != nil {
+			dwCancel()
+		}
 	}()
 	return nil
 }

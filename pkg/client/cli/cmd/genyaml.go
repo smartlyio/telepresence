@@ -336,9 +336,8 @@ func (g *genContainerInfo) run(cmd *cobra.Command, kubeFlags map[string]string) 
 	}
 
 	podTpl := wl.GetPodTemplate()
-	agentContainer, _ := agentconfig.AgentContainer(
-		ctx,
-		&core.Pod{
+	ab := agentconfig.ContainerBuilder{
+		Pod: &core.Pod{
 			TypeMeta: meta.TypeMeta{
 				Kind:       "pod",
 				APIVersion: "v1",
@@ -346,8 +345,9 @@ func (g *genContainerInfo) run(cmd *cobra.Command, kubeFlags map[string]string) 
 			ObjectMeta: podTpl.ObjectMeta,
 			Spec:       podTpl.Spec,
 		},
-		cm,
-	)
+		Config: cm,
+	}
+	agentContainer, _ := ab.AgentContainer(ctx)
 	return g.writeObjToOutput(agentContainer)
 }
 

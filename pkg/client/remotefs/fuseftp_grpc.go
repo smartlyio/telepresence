@@ -66,6 +66,8 @@ func (m *ftpMounter) Start(ctx context.Context, workload, container, clientMount
 			dlog.Debugf(ctx, "Unmounting FTP file system for container %s[%s] (address %s) at %q", workload, container, podAddrPort, clientMountPoint)
 			if _, err = m.client.Unmount(ctx, m.id); err != nil {
 				dlog.Errorf(ctx, "Unmount of %s failed: %v", clientMountPoint, err)
+			} else {
+				dlog.Debugf(ctx, "FTP file system for container %s[%s] (address %s) successfully unmounted", workload, container, podAddrPort)
 			}
 		}()
 		dlog.Infof(ctx, "File system for container %s[%s] (address %s) successfully mounted%s at %q", workload, container, podAddrPort, roTxt, clientMountPoint)

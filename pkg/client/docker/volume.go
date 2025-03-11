@@ -19,6 +19,7 @@ import (
 	"github.com/go-json-experiment/json"
 
 	"github.com/datawire/dlib/dlog"
+	"github.com/telepresenceio/telepresence/v2/pkg/agentconfig"
 	"github.com/telepresenceio/telepresence/v2/pkg/client"
 	"github.com/telepresenceio/telepresence/v2/pkg/client/cache"
 	"github.com/telepresenceio/telepresence/v2/pkg/proc"
@@ -163,17 +164,32 @@ func getLatestPluginVersion(ctx context.Context, pluginName string) (ver semver.
 	return ver, err
 }
 
-func StartVolumeMounts(ctx context.Context, pluginName, dcName, container string, sftpPort int32, mounts, vols []string, ro bool) ([]string, error) {
+func StartVolumeMounts(ctx context.Context, pluginName, dcName, container string, sftpPort int32, mounts agentconfig.MountPolicies, ro bool) (map[string]string, error) {
 	host, err := ContainerIP(ctx, dcName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieved container ip for %s: %w", dcName, err)
 	}
-	for i, dir := range mounts {
-		v := fmt.Sprintf("%s-%d", container, i)
-		if err := startVolumeMount(ctx, pluginName, host, sftpPort, v, container, dir, ro); err != nil {
-			return vols, err
+
+	vols := make(map[string]string)
+	i := 0
+	for dir, policy := range mounts {
+		volRO := ro
+		switch policy {
+		case agentconfig.MountPolicyIgnore:
+			continue
+		case agentconfig.MountPolicyLocal:
+			// Mount using a local binding, unless user already provided a mount.
+		case agentconfig.MountPolicyRemoteReadOnly:
+			volRO = true
+			fallthrough
+		case agentconfig.MountPolicyRemote:
+			v := fmt.Sprintf("%s-%d", container, i)
+			i++
+			if err := startVolumeMount(ctx, pluginName, host, sftpPort, v, container, dir, volRO); err != nil {
+				return vols, err
+			}
+			vols[v] = dir
 		}
-		vols = append(vols, v)
 	}
 	return vols, nil
 }

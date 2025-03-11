@@ -388,7 +388,12 @@ func addAgentContainer(
 	config *agentconfig.Sidecar,
 	patches PatchOps,
 ) (PatchOps, map[string]string) {
-	acn, replaceAnnotations := agentconfig.AgentContainer(ctx, pod, config)
+	ab := agentconfig.ContainerBuilder{
+		MountPolicies: managerutil.GetEnv(ctx).AgentMountPolicies,
+		Pod:           pod,
+		Config:        config,
+	}
+	acn, replaceAnnotations := ab.AgentContainer(ctx)
 	if acn == nil {
 		return patches, replaceAnnotations
 	}
@@ -454,7 +459,7 @@ func addPullSecrets(
 
 // addTPEnv adds telepresence specific environment variables to all interceptable app containers.
 func addTPEnv(pod *core.Pod, config *agentconfig.Sidecar, env map[string]string, patches PatchOps) PatchOps {
-	agentconfig.EachContainer(pod, config, func(app *core.Container, cc *agentconfig.Container) {
+	config.EachContainer(pod, func(app *core.Container, cc *agentconfig.Container) {
 		if cc.Replace != agentconfig.ReplacePolicyContainer {
 			patches = addContainerTPEnv(pod, app, env, patches)
 		}
@@ -513,7 +518,7 @@ func addContainerTPEnv(pod *core.Pod, cn *core.Container, env map[string]string,
 // hidePorts  will replace the symbolic name of a container port with a generated name. It will perform
 // the same replacement on all references to that port from the probes of the container.
 func hidePorts(pod *core.Pod, config *agentconfig.Sidecar, patches PatchOps) PatchOps {
-	agentconfig.EachContainer(pod, config, func(app *core.Container, cc *agentconfig.Container) {
+	config.EachContainer(pod, func(app *core.Container, cc *agentconfig.Container) {
 		if cc.Replace == agentconfig.ReplacePolicyIntercept {
 			for _, ic := range agentconfig.PortUniqueIntercepts(cc) {
 				if ic.Headless || ic.TargetPortNumeric {

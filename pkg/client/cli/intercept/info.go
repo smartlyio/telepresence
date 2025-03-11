@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"strconv"
-	"strings"
 
 	"github.com/telepresenceio/telepresence/rpc/v2/manager"
 	"github.com/telepresenceio/telepresence/v2/pkg/agentconfig"
@@ -42,33 +41,8 @@ type Info struct {
 	HttpFilter    []string          `json:"http_filter,omitempty"     yaml:"http_filter,omitempty"`
 	Global        bool              `json:"global,omitempty"          yaml:"global,omitempty"`
 	Replace       bool              `json:"replace,omitempty"         yaml:"replace,omitempty"`
-	PreviewURL    string            `json:"preview_url,omitempty"     yaml:"preview_url,omitempty"`
-	Ingress       *Ingress          `json:"ingress,omitempty"         yaml:"ingress,omitempty"`
 	PodIP         string            `json:"pod_ip,omitempty"          yaml:"pod_ip,omitempty"`
 	debug         bool
-}
-
-func NewIngress(ps *manager.PreviewSpec) *Ingress {
-	if ps == nil {
-		return nil
-	}
-	ii := ps.Ingress
-	if ii == nil {
-		return nil
-	}
-	return &Ingress{
-		Host:   ii.Host,
-		Port:   ii.Port,
-		UseTLS: ii.UseTls,
-		L5Host: ii.L5Host,
-	}
-}
-
-func PreviewURL(pu string) string {
-	if !(pu == "" || strings.HasPrefix(pu, "https://") || strings.HasPrefix(pu, "http://")) {
-		pu = "https://" + pu
-	}
-	return pu
 }
 
 func NewInfo(ctx context.Context, ii *manager.InterceptInfo, ro bool, mountError error) *Info {
@@ -77,7 +51,8 @@ func NewInfo(ctx context.Context, ii *manager.InterceptInfo, ro bool, mountError
 	if mountError != nil {
 		m = &mount.Info{Error: mountError.Error()}
 	} else if ii.MountPoint != "" {
-		m = mount.NewInfo(ctx, ii.Environment, ii.FtpPort, ii.SftpPort, ii.ClientMountPoint, ii.MountPoint, ii.PodIp, ro)
+		m = mount.NewInfo(ctx,
+			ii.Environment, ii.FtpPort, ii.SftpPort, ii.ClientMountPoint, ii.MountPoint, ii.PodIp, agentconfig.MountPoliciesFromRPC(ii.Mounts), ro)
 	}
 	info := &Info{
 		ID:            ii.Id,
@@ -101,8 +76,6 @@ func NewInfo(ctx context.Context, ii *manager.InterceptInfo, ro bool, mountError
 		HttpFilter:    spec.MechanismArgs,
 		Global:        spec.Mechanism == "tcp",
 		Replace:       spec.NoDefaultPort, // spec.Replace can't be used because it's set by deprecated --replace flag
-		PreviewURL:    PreviewURL(ii.PreviewDomain),
-		Ingress:       NewIngress(ii.PreviewSpec),
 	}
 	if spec.ServiceUid != "" {
 		// For backward compatibility in JSON output
@@ -165,19 +138,6 @@ func (ii *Info) WriteTo(w io.Writer) (int64, error) {
 			}
 			return fmt.Sprintf("using mechanism=%q with args=%q", "http", ii.HttpFilter)
 		}())
-
-		if ii.PreviewURL != "" {
-			previewURL := ii.PreviewURL
-			// Right now SystemA gives back domains with the leading "https://", but
-			// let's not rely on that.
-			if !strings.HasPrefix(previewURL, "https://") && !strings.HasPrefix(previewURL, "http://") {
-				previewURL = "https://" + previewURL
-			}
-			kvf.Add("Preview URL", previewURL)
-		}
-		if in := ii.Ingress; in != nil {
-			kvf.Add("Layer 5 Hostname", in.L5Host)
-		}
 	}
 
 	if m := ii.Mount; m != nil {

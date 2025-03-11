@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"maps"
 	"math"
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"sync/atomic"
 	"time"
 
@@ -16,6 +18,7 @@ import (
 
 	"github.com/datawire/dlib/dexec"
 	"github.com/datawire/dlib/dlog"
+	"github.com/telepresenceio/telepresence/v2/pkg/agentconfig"
 	"github.com/telepresenceio/telepresence/v2/pkg/client/cli/daemon"
 	"github.com/telepresenceio/telepresence/v2/pkg/client/cli/env"
 	"github.com/telepresenceio/telepresence/v2/pkg/client/cli/flags"
@@ -34,16 +37,19 @@ type Runner struct {
 	ContainerName string
 	Environment   map[string]string
 	Mount         *mount.Info
+	localMountDir string
 }
 
 func (s *Runner) Run(ctx context.Context, waitMessage string, args ...string) error {
 	ud := daemon.GetUserClient(ctx)
+	var runFlags *RunFlags
 	if s.Flags.imageIndex > 0 {
 		// arguments between the "--" separator and the image name are docker run flags, and
 		// we must extract the relevant network flags.
 		runArgs := args[:s.imageIndex]
 		args = args[s.imageIndex:]
-		networkFlags, runArgs, err := ParseRunFlags(runArgs)
+		var err error
+		runFlags, runArgs, err = ParseRunFlags(runArgs)
 		if err != nil {
 			return err
 		}
@@ -51,11 +57,11 @@ func (s *Runner) Run(ctx context.Context, waitMessage string, args ...string) er
 		if len(runArgs) > 0 {
 			args = append(runArgs, args...)
 		}
-		if pps := networkFlags.PublishedPorts; len(pps) > 0 {
+		if pps := runFlags.PublishedPorts; len(pps) > 0 {
 			s.Flags.PublishedPorts = append(s.Flags.PublishedPorts, pps...)
 		}
-		if nts := networkFlags.Networks; len(nts) > 0 {
-			connectCancel, err := ConnectNetworksToDaemon(ctx, networkFlags.Networks, ud.DaemonID().ContainerName())
+		if nts := runFlags.Networks; len(nts) > 0 {
+			connectCancel, err := ConnectNetworksToDaemon(ctx, runFlags.Networks, ud.DaemonID().ContainerName())
 			defer connectCancel()
 			if err != nil {
 				return err
@@ -70,6 +76,11 @@ func (s *Runner) Run(ctx context.Context, waitMessage string, args ...string) er
 	defer func() {
 		if err := os.Remove(file.Name()); err != nil {
 			dlog.Errorf(ctx, "failed to remove temporary environment file %q: %v", file.Name(), err)
+		}
+		if s.localMountDir != "" {
+			if err := os.RemoveAll(s.localMountDir); err != nil {
+				dlog.Errorf(ctx, "failed to remove local mount directory %q: %v", s.localMountDir, err)
+			}
 		}
 	}()
 
@@ -92,8 +103,7 @@ func (s *Runner) Run(ctx context.Context, waitMessage string, args ...string) er
 	procCtx = dos.WithStdout(procCtx, outWrt)
 
 	spin := spinner.New(ctx, "container "+s.ContainerName)
-	spin.Message("starting")
-	w := s.start(procCtx, s.ContainerName, envFile, args)
+	w := s.start(procCtx, s.ContainerName, envFile, runFlags, args)
 	if w.err == nil {
 		w.err = ud.AddHandler(ctx, s.Environment["TELEPRESENCE_INTERCEPT_ID"], w.cmd, w.name)
 		spin.Message("started")
@@ -118,12 +128,53 @@ func (s *Runner) Run(ctx context.Context, waitMessage string, args ...string) er
 	return nil
 }
 
-func (s *Runner) start(ctx context.Context, name, envFile string, args []string) *waiter {
+func (s *Runner) adjustMounts(ctx context.Context, runFlags *RunFlags, args []string) ([]string, agentconfig.MountPolicies, error) {
+	var mounts agentconfig.MountPolicies
+	if m := s.Mount; m != nil {
+		mounts = maps.Clone(m.Mounts)
+		if runFlags != nil {
+			if len(runFlags.Volumes) > 0 || len(runFlags.Mounts) > 0 {
+				mounts = maps.Clone(mounts)
+				for _, v := range runFlags.Volumes {
+					dlog.Infof(ctx, "Skipping auto-mounting of path %s due to user provided -v %s", v.Target, v)
+					delete(mounts, v.Target)
+				}
+				for _, v := range runFlags.Mounts {
+					dlog.Infof(ctx, "Skipping auto-mounting of path %s due to user provided --mount %s", v.Target, v)
+					delete(mounts, v.Target)
+				}
+			}
+		}
+		for path, mp := range mounts {
+			if mp == agentconfig.MountPolicyLocal {
+				if s.localMountDir == "" {
+					var err error
+					s.localMountDir, err = os.MkdirTemp("", "telfs-local-*")
+					if err != nil {
+						return nil, nil, err
+					}
+				}
+				hostPath := filepath.Join(s.localMountDir, path)
+				if err := os.MkdirAll(hostPath, 0o755); err != nil {
+					dlog.Error(ctx, err)
+					continue
+				}
+				ma := fmt.Sprintf("type=bind,src=%s,dst=%s", hostPath, path)
+				dlog.Infof(ctx, "Adding --mount %s for remote path %s, because it has a local mount policy and is not provided by user", ma, path)
+				args = append(args, "--mount", ma)
+			}
+		}
+	}
+	return args, mounts, nil
+}
+
+func (s *Runner) start(ctx context.Context, name, envFile string, runFlags *RunFlags, args []string) *waiter {
 	ourArgs := []string{
 		"run",
 		"--env-file", envFile,
 	}
 	w := &waiter{name: name}
+	w.mount = s.Mount
 
 	if s.Debug {
 		ourArgs = append(ourArgs, "--security-opt", "apparmor=unconfined", "--cap-add", "SYS_PTRACE")
@@ -139,41 +190,54 @@ func (s *Runner) start(ctx context.Context, name, envFile string, args []string)
 	if !set {
 		ourArgs = append(ourArgs, "--rm")
 	}
+	ourArgs, mounts, err := s.adjustMounts(ctx, runFlags, ourArgs)
+	if err != nil {
+		w.err = err
+		return w
+	}
 
 	ud := daemon.GetUserClient(ctx)
 	if !ud.Containerized() {
 		// The process is containerized but the user daemon runs on the host
+		for path, policy := range mounts {
+			ro := ""
+			switch policy {
+			case agentconfig.MountPolicyIgnore, agentconfig.MountPolicyLocal:
+			case agentconfig.MountPolicyRemoteReadOnly:
+				ro = ",ro"
+				fallthrough
+			case agentconfig.MountPolicyRemote:
+				ourArgs = append(ourArgs, "--mount", fmt.Sprintf("type=bind,src=%s,dst=%s%s", filepath.Join(s.Mount.LocalDir, path), path, ro))
+			}
+		}
 		ourArgs = append(ourArgs, "--dns-search", "tel2-search")
 		for _, p := range s.Flags.PublishedPorts {
 			ourArgs = append(ourArgs, "-p", p.String())
 		}
-		if m := s.Mount; m != nil {
-			for _, mv := range m.Mounts {
-				ourArgs = append(ourArgs, "-v", fmt.Sprintf("%s/%s:%s", m.LocalDir, mv, mv))
-			}
-		}
 	} else {
 		daemonName := ud.DaemonID().ContainerName()
 		ourArgs = append(ourArgs, "--network", "container:"+daemonName)
-
-		if m := s.Mount; m != nil {
+		maps.DeleteFunc(mounts, func(s string, policy agentconfig.MountPolicy) bool {
+			return policy == agentconfig.MountPolicyIgnore || policy == agentconfig.MountPolicyLocal
+		})
+		if len(mounts) > 0 {
 			pluginName, err := docker.EnsureVolumePlugin(ctx)
 			if err != nil {
 				ioutil.Printf(output.Err(ctx), "Remote mount disabled: %s\n", err)
 			} else {
 				container := s.Environment["TELEPRESENCE_CONTAINER"]
-				dlog.Infof(ctx, "Mounting %s from container %s", m.RemoteDir, container)
-				w.volumes, w.err = docker.StartVolumeMounts(ctx, pluginName, daemonName, container, m.Port, m.Mounts, nil, m.ReadOnly)
+				m := s.Mount
+				w.volumes, w.err = docker.StartVolumeMounts(ctx, pluginName, daemonName, container, m.Port, mounts, m.ReadOnly)
 				if w.err != nil {
 					dlog.Error(ctx, w.err)
 					return w
 				}
-				for i, vol := range w.volumes {
+				for vol, path := range w.volumes {
 					ro := ""
-					if m.ReadOnly {
+					if m.ReadOnly || mounts.Get("", path) == agentconfig.MountPolicyRemoteReadOnly {
 						ro = ":ro"
 					}
-					ourArgs = append(ourArgs, "-v", fmt.Sprintf("%s:%s%s", vol, m.Mounts[i], ro))
+					ourArgs = append(ourArgs, "-v", fmt.Sprintf("%s:%s%s", vol, path, ro))
 				}
 			}
 		}
@@ -211,8 +275,10 @@ type waiter struct {
 	// name of container to stop when the run ends
 	name string
 
-	// volume mounts to stop when the run ends
-	volumes []string
+	mount *mount.Info
+
+	// volume mounts as name -> path.
+	volumes map[string]string
 
 	procsToCancel []context.CancelFunc
 }
@@ -262,21 +328,33 @@ func (w *waiter) wait(ctx context.Context) error {
 	defer killTimer.Stop()
 
 	var exited, signalled atomic.Bool
-	go EnsureStopContainer(ctx, w.name, w.volumes, &exited, &signalled)
+	volNames := make([]string, len(w.volumes))
+	i := 0
+	for vol := range w.volumes {
+		volNames[i] = vol
+		i++
+	}
+	afterExitCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	done := make(chan error, 1)
+	go EnsureStopContainer(afterExitCtx, w.name, volNames, &exited, &signalled, done)
 
 	err := w.cmd.Wait()
-	if err != nil {
-		if signalled.Load() {
-			// Errors caused by context or signal termination don't count.
-			err = nil
-		} else {
-			err = errcat.NoDaemonLogs.New(err)
-		}
+	exited.Store(true)
+	cancel()
+	waitErr := <-done
+	if signalled.Load() {
+		// Errors caused by context or signal termination don't count.
+		err = nil
 	}
-	return err
+	if err == nil {
+		err = waitErr
+	}
+	return errcat.NoDaemonLogs.New(err)
 }
 
-func EnsureStopContainer(ctx context.Context, containerID string, volumes []string, exited, signalled *atomic.Bool) {
+func EnsureStopContainer(ctx context.Context, containerID string, volumes []string, exited, signalled *atomic.Bool, done chan<- error) {
+	defer close(done)
 	if len(volumes) > 0 {
 		defer func() {
 			time.Sleep(200 * time.Millisecond)
@@ -293,19 +371,19 @@ func EnsureStopContainer(ctx context.Context, containerID string, volumes []stri
 	select {
 	case <-ctx.Done():
 	case <-sigCh:
+		signalled.Store(true)
 	}
-	signalled.Store(true)
 	if exited.Load() {
 		dlog.Debugf(ctx, "No need to stop container %s. It already exited", containerID)
 		return
 	}
 	ctx = context.WithoutCancel(ctx)
 	ctx = docker.EnableClient(ctx)
-	if err := docker.StopContainer(ctx, containerID); err != nil {
-		if !errdefs.IsNotFound(err) {
-			dlog.Error(ctx, err)
-		}
+	err := docker.StopContainer(ctx, containerID)
+	if err != nil && errdefs.IsNotFound(err) {
+		err = nil
 	}
+	done <- err
 }
 
 func ReadContainerID(ctx context.Context, cidFile string) (containerID string, err error) {

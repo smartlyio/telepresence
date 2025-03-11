@@ -165,7 +165,7 @@ func (s *interceptFlagSuite) Test_ContainerReplace() {
 			mounts := ii.Mount.Mounts
 			require.True(len(mounts) > 2)
 			dlog.Infof(ctx, "Mounts = %v", mounts)
-			for _, mount := range mounts {
+			for mount := range mounts {
 				st, err := os.Stat(filepath.Join(ii.Mount.LocalDir, mount))
 				require.NoError(err)
 				require.True(st.IsDir())

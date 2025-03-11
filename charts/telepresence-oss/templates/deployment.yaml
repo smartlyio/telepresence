@@ -135,6 +135,10 @@ spec:
           - name: AGENT_INIT_RESOURCES
             value: '{{ toJson .initResources }}'
           {{- end }}
+          {{- if .mountPolicies }}
+          - name: AGENT_MOUNT_POLICIES
+            value: '{{ toJson .mountPolicies }}'
+          {{- end }}
           {{- with .image }}
           {{- if .name }}
           - name: AGENT_IMAGE_NAME

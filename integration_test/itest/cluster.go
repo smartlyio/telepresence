@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"runtime"
 	"slices"
 	"strconv"
@@ -380,7 +381,12 @@ func (s *cluster) ensureNoManager(ctx context.Context) {
 	})
 	if ix >= 0 {
 		e := es[ix]
-		t.Fatalf("%s is already installed in namespace %s. Please uninstall before testing.", e["chart"], e["namespace"])
+		ns := e["namespace"].(string)
+		if regexp.MustCompile(`^ambassador-[0-9a-f]+$`).MatchString(ns) {
+			s.UninstallTrafficManager(ctx, ns)
+		} else {
+			t.Fatalf("%s is already installed in namespace %s. Please uninstall before testing.", e["chart"], ns)
+		}
 	}
 }
 

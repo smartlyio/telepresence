@@ -71,6 +71,7 @@ func (ig *ingest) response() *rpc.IngestInfo {
 		SftpPort:         ig.SftpPort,
 		FtpPort:          ig.FtpPort,
 		MountPoint:       cn.MountPoint,
+		Mounts:           cn.Mounts,
 		ClientMountPoint: ig.localMountPoint,
 		Environment:      cn.Environment,
 	}

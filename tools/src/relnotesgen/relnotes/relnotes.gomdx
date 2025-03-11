@@ -16,7 +16,9 @@ import { Note, Title, Body } from '@site/src/components/ReleaseNotes'
 {{- range .Notes }}
 <Note>
 	<Title type="{{.Type}}"{{if .HRef}} href="{{.HRef}}"{{else if .Docs}} docs="{{.Docs}}"{{end}}>{{.Title}}</Title>
-	<Body>{{.Body}}</Body>
+	<Body>
+{{.Body}}
+  </Body>
 	{{- if .Image}}
 	<Image src="{{.Image}}"/>
 	{{- end}}

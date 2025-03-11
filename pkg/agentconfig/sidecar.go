@@ -19,8 +19,6 @@ const (
 	InitContainerName        = "tel-agent-init"
 	AnnotationVolumeName     = "traffic-annotations"
 	AnnotationMountPoint     = "/tel_pod_info"
-	ConfigVolumeName         = "traffic-config"
-	ConfigMountPoint         = "/etc/traffic-agent"
 	TerminatingTLSVolumeName = "traffic-terminating-tls"
 	TerminatingTLSMountPoint = "/terminating_tls"
 	OriginatingTLSVolumeName = "traffic-originating-tls"
@@ -43,6 +41,9 @@ const (
 	// EnvInterceptMounts mount points propagated to client during intercept.
 	EnvInterceptMounts = "TELEPRESENCE_MOUNTS"
 
+	// EnvLocalMounts mount points that the client should mount locally (e.g. /tmp).
+	EnvLocalMounts = "TELEPRESENCE_LOCAL_MOUNTS"
+
 	// EnvAPIPort is the port number of the Telepresence API server, when it is enabled.
 	EnvAPIPort = "TELEPRESENCE_API_PORT"
 
@@ -52,6 +53,7 @@ const (
 	ManualInjectAnnotation               = DomainPrefix + "manually-injected"
 	InjectAnnotation                     = DomainPrefix + "inject-" + ContainerName
 	InjectIgnoreVolumeMounts             = DomainPrefix + "inject-ignore-volume-mounts"
+	VolumeMountPolicies                  = DomainPrefix + "mount-policies"
 	TerminatingTLSSecretAnnotation       = DomainPrefix + "inject-terminating-tls-secret"
 	OriginatingTLSSecretAnnotation       = DomainPrefix + "inject-originating-tls-secret"
 	ConfigAnnotation                     = DomainPrefix + "agent-config"
@@ -61,7 +63,6 @@ const (
 	WorkloadNameLabel                    = "telepresence.io/workloadName"
 	WorkloadKindLabel                    = "telepresence.io/workloadKind"
 	WorkloadEnabledLabel                 = "telepresence.io/workloadEnabled"
-	K8SCreatedByLabel                    = "app.kubernetes.io/created-by"
 )
 
 type ReplacePolicy int
@@ -129,11 +130,17 @@ type Container struct {
 	// Prefix used for all keys in the container environment copy
 	EnvPrefix string `json:"envPrefix,omitzero"`
 
-	// Where the agent mounts the agents volumes
+	// Where the agent mounts its volumes
 	MountPoint string `json:"mountPoint,omitzero"`
 
-	// Mounts are the actual mount points that are mounted by this container
-	Mounts []string `json:"Mounts,omitempty"`
+	// Mounts controls how the traffic-agent makes mounts available for this container. Each
+	// policy is keyed with either the name of a volume or by a path prefix that matches the mounted
+	// path.
+	Mounts MountPolicies `json:"mounts,omitempty"`
+
+	// MountPaths are the actual mount points that are mounted by this container
+	// Deprecated: Use Mounts.
+	MountPaths []string `json:"Mounts,omitempty"`
 
 	// Replace is whether the agent should replace the intercepted container, it's ports, or nothing.
 	Replace ReplacePolicy `json:"replace,omitzero"`
@@ -186,6 +193,10 @@ type Sidecar struct {
 	// InitResources is the resource requirements for the initContainer sidecar
 	InitResources *core.ResourceRequirements `json:"initResources,omitempty"`
 
+	// MountPolicies controls how the agent will handle new mounts that might arrive when
+	// the pod is created.
+	MountPolicies MountPolicies `json:"mountPolicies,omitzero"`
+
 	// The intercepts managed by the agent
 	Containers []*Container `json:"containers,omitempty"`
 
@@ -212,6 +223,20 @@ func (s *Sidecar) Clone() SidecarExt {
 		}
 	}
 	return &cs
+}
+
+// EachContainer will find each container and match it against a container
+// in the pod using its name. The given function is called once for each match.
+func (s *Sidecar) EachContainer(pod *core.Pod, f func(*core.Container, *Container)) {
+	cns := pod.Spec.Containers
+	for _, cc := range s.Containers {
+		for i := range cns {
+			if app := &cns[i]; app.Name == cc.Name {
+				f(app, cc)
+				break
+			}
+		}
+	}
 }
 
 // Marshal returns YAML encoding of the Sidecar.

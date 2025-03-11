@@ -91,18 +91,59 @@ for an intercept, but you can explicitly define that only one service and/or por
        containers:
 ```
 
-### Ignore Certain Volume Mounts
+### Control Volume Sharing
 
-An annotation `telepresence.getambassador.io/inject-ignore-volume-mounts` can be used to make the injector ignore certain volume mounts denoted by a comma-separated string. The specified volume mounts from the original container will not be appended to the agent sidecar container.
+Telepresence enables control over what volumes that will be shared with connecting clients using mount policies. A
+policy can be declared for a volume name, or for paths matching a path prefix, and can be added either as a Helm
+chart value using `agents.mountPolicies` or using the workload annotation `telepresence.getambassador.io/mount-policies`.
 
-```diff
+Possible Mount Policies are:
+
+| Policy         | Meaning                                                                                              |
+|----------------|------------------------------------------------------------------------------------------------------|
+| Ignore         | Do not share this volume with engaging clients                                                       |
+| Local          | Do not share this volume with engaging clients, instead Mount it using the client's local filesystem |
+| Remote         | Share this volume, and give engaging clients read and write access to it                             |
+| RemoteReadOnly | Like Remote, but with read-only access                                                               |
+
+Example Helm chart value:
+```yaml
+agents:
+  mountPolicies:
+    '/tmp': Local
+    certs: RemoteReadOnly
+    private: Ignore
+```
+
+Example using the `telepresence.getambassador.io/mount-policies` annotation:
+```yaml
+spec:
+  template:
+    metadata:
+      annotations:
+        'telepresence.getambassador.io/mount-policies': '{"/tmp":"Local","certs":"RemoteReadOnly","private":"Ignore"}'
+```
+
+The annotation `telepresence.getambassador.io/inject-ignore-volume-mounts` can be used if the objective is to just ignore
+volume mounts, but it's recommended to always use the `telepresence.getambassador.io/mount-policies` annotation.
+
+Example using the `telepresence.getambassador.io/inject-ignore-volume-mounts` annotation:
+
+```yaml
  spec:
    template:
      metadata:
        annotations:
-+        telepresence.getambassador.io/inject-ignore-volume-mounts: "foo,bar"
-     spec:
-       containers:
+         telepresence.getambassador.io/inject-ignore-volume-mounts: "private"
+```
+
+The example is equivalent to:
+```yaml
+ spec:
+   template:
+     metadata:
+       annotations:
+         telepresence.getambassador.io/mount-policies: '{"private":"Ignore"}'
 ```
 
 ### Note on Numeric Ports

@@ -702,6 +702,7 @@ func (s *service) ReviewIntercept(ctx context.Context, rIReq *rpc.ReviewIntercep
 			intercept.Headers = rIReq.Headers
 			intercept.Metadata = rIReq.Metadata
 			intercept.Environment = rIReq.Environment
+			intercept.Mounts = rIReq.Mounts
 		}
 	})
 

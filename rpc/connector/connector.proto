@@ -340,9 +340,11 @@ message IngestInfo {
   // The environment of the ingested container
   map<string, string> environment = 8;
 
-  // The directory where the client mounts the remote mount_point. Only
-  // set when obtaining InterceptInfo from the user daemon.
+  // The directory where the client mounts the remote mount_point.
   string client_mount_point = 9;
+
+  // Map of mount path -> MountPolicy
+  map<string, int32> mounts = 10;
 }
 
 message WatchWorkloadsRequest {

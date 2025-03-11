@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -31,14 +32,8 @@ var TrafficManagerSelector = labels.SelectorFromSet(map[string]string{ //nolint:
 })
 
 type GeneratorConfig interface {
-	// Generate generates a configuration for the given workload. If replaceContainers is given it will be used to configure
-	// container replacement EXCEPT if existingConfig is not nil, in which replaceContainers will be
-	// ignored and the value from existingConfig used. 0 can be conventionally passed in as replaceContainers in this case.
-	Generate(
-		ctx context.Context,
-		wl k8sapi.Workload,
-		existingConfig agentconfig.SidecarExt,
-	) (sc agentconfig.SidecarExt, err error)
+	// Generate generates a configuration for the given workload.
+	Generate(ctx context.Context, wl k8sapi.Workload, existingConfig agentconfig.SidecarExt) (sc agentconfig.SidecarExt, err error)
 }
 
 var GeneratorConfigFunc func(qualifiedAgentImage string) (GeneratorConfig, error) //nolint:gochecknoglobals // extension point
@@ -57,6 +52,7 @@ type BasicGeneratorConfig struct {
 	AppProtocolStrategy k8sapi.AppProtocolStrategy
 	SecurityContext     *core.SecurityContext
 	InitSecurityContext *core.SecurityContext
+	MountPolicies       agentconfig.MountPolicies
 }
 
 func portsFromContainerPortsAnnotation(wl k8sapi.Workload) (ports []agentconfig.PortIdentifier, err error) {
@@ -159,11 +155,14 @@ func (cfg *BasicGeneratorConfig) Generate(
 	if err != nil {
 		return nil, err
 	}
-	ignoredVolumeMounts := agentconfig.GetIgnoredVolumeMounts(pod.Annotations)
+	cfg.MountPolicies, err = cfg.MountPolicies.AddAnnotations(pod.Annotations)
+	if err != nil {
+		return nil, err
+	}
 	var ccs []*agentconfig.Container
 	for _, svc := range svcs {
 		svcImpl, _ := k8sapi.ServiceImpl(svc)
-		ccs = appendAgentContainerConfigs(ctx, svcImpl, pod, ports, agentPortNumberFunc, ccs, existingConfig, cfg.AppProtocolStrategy, ignoredVolumeMounts)
+		ccs = cfg.appendAgentContainerConfigs(ctx, svcImpl, pod, ports, agentPortNumberFunc, ccs, existingConfig)
 	}
 
 	ports, err = portsFromContainerPortsAnnotation(wl)
@@ -171,7 +170,7 @@ func (cfg *BasicGeneratorConfig) Generate(
 		return nil, err
 	}
 	if len(ports) > 0 {
-		if ccs, err = appendServiceLessAgentContainerConfigs(ctx, pod, ports, agentPortNumberFunc, ccs, existingConfig, cfg.AppProtocolStrategy, ignoredVolumeMounts); err != nil {
+		if ccs, err = cfg.appendServiceLessAgentContainerConfigs(ctx, pod, ports, agentPortNumberFunc, ccs, existingConfig); err != nil {
 			return nil, err
 		}
 	}
@@ -184,13 +183,7 @@ func (cfg *BasicGeneratorConfig) Generate(
 			continue
 		}
 		if !slices.ContainsFunc(ccs, func(cc *agentconfig.Container) bool { return cc.Name == cn.Name }) {
-			ccs = append(ccs, &agentconfig.Container{
-				Name:       cn.Name,
-				EnvPrefix:  CapsBase26(uint64(len(ccs))) + "_",
-				MountPoint: agentconfig.MountPrefixApp + "/" + cn.Name,
-				Mounts:     containerMounts(cn, ignoredVolumeMounts),
-				Replace:    containerReplacePolicy(existingConfig, cn),
-			})
+			ccs = append(ccs, cfg.newContainerConfig(cn, len(ccs), nil, containerReplacePolicy(existingConfig, cn)))
 		}
 	}
 
@@ -204,6 +197,7 @@ func (cfg *BasicGeneratorConfig) Generate(
 		ManagerHost:         ManagerAppName + "." + cfg.ManagerNamespace,
 		ManagerPort:         cfg.ManagerPort,
 		APIPort:             cfg.APIPort,
+		MountPolicies:       cfg.MountPolicies,
 		Containers:          ccs,
 		InitResources:       cfg.InitResources,
 		Resources:           cfg.Resources,
@@ -214,7 +208,7 @@ func (cfg *BasicGeneratorConfig) Generate(
 	}, nil
 }
 
-func appendAgentContainerConfigs(
+func (cfg *BasicGeneratorConfig) appendAgentContainerConfigs(
 	ctx context.Context,
 	svc *core.Service,
 	pod *core.PodTemplateSpec,
@@ -222,8 +216,6 @@ func appendAgentContainerConfigs(
 	agentPortNumberFunc func(int32) uint16,
 	ccs []*agentconfig.Container,
 	existingConfig agentconfig.SidecarExt,
-	aps k8sapi.AppProtocolStrategy,
-	ignoredVolumeMounts agentconfig.IgnoredVolumeMounts,
 ) []*agentconfig.Container {
 	ports := filterServicePorts(svc, portAnnotations)
 nextSvcPort:
@@ -250,7 +242,7 @@ nextSvcPort:
 			ServicePort:       uint16(port.Port),
 			TargetPortNumeric: port.TargetPort.Type == intstr.Int,
 			Protocol:          port.Protocol,
-			AppProtocol:       k8sapi.GetAppProto(ctx, aps, &port),
+			AppProtocol:       k8sapi.GetAppProto(ctx, cfg.AppProtocolStrategy, &port),
 			AgentPort:         agentPortNumberFunc(appPort.ContainerPort),
 			ContainerPortName: appPort.Name,
 			ContainerPort:     uint16(appPort.ContainerPort),
@@ -263,16 +255,45 @@ nextSvcPort:
 				continue nextSvcPort
 			}
 		}
-		ccs = append(ccs, &agentconfig.Container{
-			Name:       cn.Name,
-			EnvPrefix:  CapsBase26(uint64(len(ccs))) + "_",
-			MountPoint: agentconfig.MountPrefixApp + "/" + cn.Name,
-			Mounts:     containerMounts(cn, ignoredVolumeMounts),
-			Intercepts: []*agentconfig.Intercept{ic},
-			Replace:    containerReplacePolicy(existingConfig, cn),
-		})
+		ccs = append(ccs, cfg.newContainerConfig(cn, len(ccs), []*agentconfig.Intercept{ic}, containerReplacePolicy(existingConfig, cn)))
 	}
 	return ccs
+}
+
+func (cfg *BasicGeneratorConfig) newContainerConfig(cn *core.Container, index int, ics []*agentconfig.Intercept, rp agentconfig.ReplacePolicy) *agentconfig.Container {
+	// Create the concrete MountPolicies that map mount path to policy
+	var mps agentconfig.MountPolicies
+	for i := range cn.VolumeMounts {
+		vm := &cn.VolumeMounts[i]
+		path := vm.MountPath
+		vp := cfg.MountPolicies.Get(vm.Name, path)
+		if vp != agentconfig.MountPolicyIgnore {
+			if mps == nil {
+				mps = make(agentconfig.MountPolicies, len(cn.VolumeMounts))
+			}
+			mps[path] = vp
+		}
+	}
+	// Legacy mounts property must list all remote mounts, no more and no less
+	var mounts []string
+	if len(mps) > 0 {
+		mounts = make([]string, 0, len(mps))
+		for key, mp := range mps {
+			if mp == agentconfig.MountPolicyRemote || mp == agentconfig.MountPolicyRemoteReadOnly {
+				mounts = append(mounts, key)
+			}
+		}
+	}
+	sort.Strings(mounts)
+	return &agentconfig.Container{
+		Name:       cn.Name,
+		EnvPrefix:  CapsBase26(uint64(index)) + "_",
+		MountPoint: agentconfig.MountPrefixApp + "/" + cn.Name,
+		MountPaths: mounts,
+		Mounts:     mps,
+		Intercepts: ics,
+		Replace:    rp,
+	}
 }
 
 func findContainerPort(cns []core.Container, p agentconfig.PortIdentifier) (*core.Container, *core.ContainerPort) {
@@ -292,15 +313,13 @@ func findContainerPort(cns []core.Container, p agentconfig.PortIdentifier) (*cor
 	return nil, nil
 }
 
-func appendServiceLessAgentContainerConfigs(
+func (cfg *BasicGeneratorConfig) appendServiceLessAgentContainerConfigs(
 	ctx context.Context,
 	pod *core.PodTemplateSpec,
 	portAnnotations []agentconfig.PortIdentifier,
 	agentPortNumberFunc func(int32) uint16,
 	ccs []*agentconfig.Container,
 	existingConfig agentconfig.SidecarExt,
-	aps k8sapi.AppProtocolStrategy,
-	ignoredVolumeMounts agentconfig.IgnoredVolumeMounts,
 ) ([]*agentconfig.Container, error) {
 	cns := pod.Spec.Containers
 	anonNameIndex := uint64(0)
@@ -325,7 +344,7 @@ nextContainerPort:
 			TargetPortNumeric: true,
 			Protocol:          appPort.Protocol,
 			AgentPort:         agentPortNumberFunc(appPort.ContainerPort),
-			AppProtocol:       getContainerPortAppProtocol(ctx, aps, appPort.Name),
+			AppProtocol:       getContainerPortAppProtocol(ctx, cfg.AppProtocolStrategy, appPort.Name),
 			ContainerPortName: appPort.Name,
 			ContainerPort:     uint16(appPort.ContainerPort),
 		}
@@ -333,7 +352,7 @@ nextContainerPort:
 		// The container might already have intercepts declared
 		for _, cc := range ccs {
 			if cc.Name == cn.Name {
-				// Don't add service less intercept if an intercept with a service is present
+				// Don't add service-less intercept if an intercept with a service is present
 				cnFound := false
 				for _, eic := range cc.Intercepts {
 					if eic.ContainerPort == ic.ContainerPort {
@@ -347,14 +366,7 @@ nextContainerPort:
 				continue nextContainerPort
 			}
 		}
-		ccs = append(ccs, &agentconfig.Container{
-			Name:       cn.Name,
-			EnvPrefix:  CapsBase26(uint64(len(ccs))) + "_",
-			MountPoint: agentconfig.MountPrefixApp + "/" + cn.Name,
-			Mounts:     containerMounts(cn, ignoredVolumeMounts),
-			Intercepts: []*agentconfig.Intercept{ic},
-			Replace:    containerReplacePolicy(existingConfig, cn),
-		})
+		ccs = append(ccs, cfg.newContainerConfig(cn, len(ccs), []*agentconfig.Intercept{ic}, containerReplacePolicy(existingConfig, cn)))
 	}
 	return ccs, nil
 }
@@ -370,19 +382,6 @@ func containerReplacePolicy(existingConfig agentconfig.SidecarExt, cn *core.Cont
 		}
 	}
 	return replaceContainer
-}
-
-func containerMounts(cn *core.Container, ignoredVolumeMounts agentconfig.IgnoredVolumeMounts) []string {
-	var mounts []string
-	if l := len(cn.VolumeMounts); l > 0 {
-		mounts = make([]string, 0, l)
-		for _, vm := range cn.VolumeMounts {
-			if !ignoredVolumeMounts.IsVolumeIgnored(vm.Name, vm.MountPath) {
-				mounts = append(mounts, vm.MountPath)
-			}
-		}
-	}
-	return mounts
 }
 
 func getContainerPortAppProtocol(ctx context.Context, aps k8sapi.AppProtocolStrategy, portName string) string {

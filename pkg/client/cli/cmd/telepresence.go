@@ -145,7 +145,7 @@ func WithSubCommands(ctx context.Context) context.Context {
 		ingestCmd(),
 		interceptCmd(),
 		kubeauthCmd(),
-		leave(),
+		leaveCmd(),
 		list(),
 		listContexts(),
 		listNamespaces(),
