@@ -19,9 +19,10 @@ type Operator string
 // NOTE! The lowercase variants in the k8s.io/apimachinery/pkg/selection are intended for
 // the selector string representation only. They are invalid in a YAML/JSON manifest!
 const (
-	OperatorIn     Operator = "In"
-	OperatorNotIn  Operator = "NotIn"
-	OperatorExists Operator = "Exists"
+	OperatorIn        Operator = "In"
+	OperatorNotIn     Operator = "NotIn"
+	OperatorExists    Operator = "Exists"
+	OperatorNotExists Operator = "DoesNotExist"
 )
 
 func (op Operator) String() string {

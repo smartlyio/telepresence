@@ -22,7 +22,10 @@ import (
 	"github.com/go-json-experiment/json"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	runtime2 "k8s.io/apimachinery/pkg/runtime"
+	core "k8s.io/api/core/v1"
+	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/clientcmd/api"
 
 	"github.com/datawire/dlib/dlog"
@@ -34,6 +37,7 @@ import (
 	"github.com/telepresenceio/telepresence/v2/pkg/errcat"
 	"github.com/telepresenceio/telepresence/v2/pkg/filelocation"
 	"github.com/telepresenceio/telepresence/v2/pkg/iputil"
+	"github.com/telepresenceio/telepresence/v2/pkg/k8sapi"
 	"github.com/telepresenceio/telepresence/v2/pkg/proc"
 	"github.com/telepresenceio/telepresence/v2/pkg/routing"
 	"github.com/telepresenceio/telepresence/v2/pkg/shellquote"
@@ -277,7 +281,7 @@ func handleLocalK8s(ctx context.Context, daemonID *daemon.Identifier, config *ap
 		return nil
 	}
 	isMinikube := false
-	if ex, ok := cl.Extensions["cluster_info"].(*runtime2.Unknown); ok {
+	if ex, ok := cl.Extensions["cluster_info"].(*runtime.Unknown); ok {
 		var data map[string]any
 		isMinikube = json.Unmarshal(ex.Raw, &data) == nil && data["provider"] == "minikube.sigs.k8s.io"
 	}
@@ -304,7 +308,12 @@ func handleLocalK8s(ctx context.Context, daemonID *daemon.Identifier, config *ap
 	if isMinikube {
 		hostPort, network = detectMinikube(ctx, cjs, addrPort, cc.Cluster)
 	} else {
-		hostPort, network = detectKind(ctx, cjs, addrPort)
+		addr = detectK3sControlPlaneNode(ctx)
+		if addr.IsValid() {
+			hostPort = netip.AddrPortFrom(addr, uint16(port))
+		} else {
+			hostPort, network = detectKind(ctx, cjs, addrPort)
+		}
 	}
 	if hostPort.IsValid() {
 		dlog.Debugf(ctx, "hostPort %s, network %s", hostPort, network)
@@ -366,7 +375,7 @@ func LaunchDaemon(ctx context.Context, daemonID *daemon.Identifier) (conn *grpc.
 			// This may happen if the daemon has died (and hence, we never discovered it), but
 			// the container still hasn't died. Let's sleep for a short while and retry.
 			if i < 6 {
-				dtime.SleepWithContext(ctx, time.Duration(i)*200*time.Millisecond)
+				dtime.SleepWithContext(ctx, time.Duration(i)*500*time.Millisecond)
 				continue
 			}
 			if stopAttempted {
@@ -484,6 +493,38 @@ func useMinikubeNetwork(ctx context.Context, addr netip.Addr) bool {
 		}
 	}
 	return false
+}
+
+// detectK3sControlPlaneNode returns the internal IP of the k3s control-plane node, if
+// such a node is found, or an invalid address otherwise.
+func detectK3sControlPlaneNode(ctx context.Context) (addr netip.Addr) {
+	ki := k8sapi.GetK8sInterface(ctx)
+	le := labels.SelectorFromSet(map[string]string{
+		"node-role.kubernetes.io/control-plane": "true",
+		"node-role.kubernetes.io/master":        "true",
+		"node.kubernetes.io/instance-type":      "k3s",
+	})
+	ns, err := ki.CoreV1().Nodes().List(ctx, meta.ListOptions{LabelSelector: le.String()})
+	if err != nil {
+		dlog.Errorf(ctx, "failed to list nodes: %v", err)
+		return addr
+	}
+	nis := ns.Items
+	for i := range nis {
+		n := &nis[i]
+		for _, a := range n.Status.Addresses {
+			if a.Type == core.NodeInternalIP {
+				addr, err = netip.ParseAddr(a.Address)
+				if err != nil {
+					dlog.Errorf(ctx, "failed to parse address %s: %v", a.Address, err)
+				} else {
+					dlog.Debugf(ctx, "Found k3s control plane %s with internal IP %s", n.Name, addr)
+				}
+				break
+			}
+		}
+	}
+	return addr
 }
 
 // detectMinikube returns the container IP:port for the given hostAddrPort for a container where the

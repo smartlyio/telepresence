@@ -43,6 +43,8 @@ already managed by some other traffic-manager.
           {{- $rqMatch = not (has $val .values) }}
         {{- else if eq .operator "Exists" }}
           {{- $rqMatch = not (eq $val "") }}
+        {{- else if eq .operator "DoesNotExist" }}
+          {{- $rqMatch = eq $val "" }}
         {{- else }}
           {{- fail printf "unsupported labelSelectorOperator %s" .operator}}
         {{- end }}
