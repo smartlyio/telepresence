@@ -34,9 +34,7 @@ will print a deprecation warning when used.
 ## <div style="display:flex;"><img src="images/feature.png" alt="feature" style="width:30px;height:fit-content;"/><div style="display:flex;margin-left:7px;">Add json-schema for the Telepresence Helm Chart</div></div>
 <div style="margin-left: 15px">
 
-Helm can validate a chart using a json-schema using the command `helm lint`, and this schema can be part of
-the actual Helm chart. The telepresence-oss Helm chart now includes such a schema, and a new
-`telepresence helm lint` command was added so that linting can be performed using the embedded chart.
+Helm can validate a chart using a json-schema using the command `helm lint`, and this schema can be part of the actual Helm chart. The telepresence-oss Helm chart now includes such a schema, and a new `telepresence helm lint` command was added so that linting can be performed using the embedded chart.
 </div>
 
 ## <div style="display:flex;"><img src="images/feature.png" alt="feature" style="width:30px;height:fit-content;"/><div style="display:flex;margin-left:7px;">No dormant container present during replace.</div></div>
@@ -46,8 +44,8 @@ Telepresence will no longer inject a dormant container during a `telepresence re
 Traffic Agent now directly serves as the replacement container, eliminating the need to forward traffic to the
 original application container. This simplification offers several advantages when using the `--replace` flag:
 
-- **Removal of the init-container:** The need for a separate init-container is no longer necessary.
-- **Elimination of port renames:** Port renames within the intercepted pod are no longer required.
+  - **Removal of the init-container:** The need for a separate init-container is no longer necessary.
+  - **Elimination of port renames:** Port renames within the intercepted pod are no longer required.
 </div>
 
 ## <div style="display:flex;"><img src="images/feature.png" alt="feature" style="width:30px;height:fit-content;"/><div style="display:flex;margin-left:7px;">One single invocation of the Telepresence intercept command can now intercept multiple ports.</div></div>
@@ -70,18 +68,14 @@ namespaceSelector:
   matchExpressions:
    - key: kubernetes.io/metadata.name
      operator: in
-     values: <namespaces>`.
+     values: <namespaces>.
 ```
 </div>
 
 ## <div style="display:flex;"><img src="images/feature.png" alt="feature" style="width:30px;height:fit-content;"/><div style="display:flex;margin-left:7px;">Improved control over how remote volumes are mounted using mount policies</div></div>
 <div style="margin-left: 15px">
 
-Mount policies, that affects how the telepresence traffic-agent shares the pod's volumes, and also how the
-client will mount them, can now be provided using the Helm chart value `agent.mountPolicies` or as JSON
-object in the workload annotation `telepresence.io/mount-policies`. A mount policy is applied to a volume
-or to all paths matching a path-prefix (distinguished by checking if first character is a '/'), and can
-be one of `Ignore`, `Local`, `Remote`, or `RemoteReadOnly`.
+Mount policies, that affects how the telepresence traffic-agent shares the pod's volumes, and also how the client will mount them, can now be provided using the Helm chart value `agent.mountPolicies` or as JSON object in the workload annotation `telepresence.io/mount-policies`. A mount policy is applied to a volume or to all paths matching a path-prefix (distinguished by checking if first character is a '/'), and can be one of `Ignore`, `Local`, `Remote`, or `RemoteReadOnly`.
 </div>
 
 ## <div style="display:flex;"><img src="images/feature.png" alt="feature" style="width:30px;height:fit-content;"/><div style="display:flex;margin-left:7px;">List output includes workload kind.</div></div>
@@ -117,7 +111,7 @@ Very few systems experience a DNS recursion lookup problem. It can only occur wh
 ## <div style="display:flex;"><img src="images/change.png" alt="change" style="width:30px;height:fit-content;"/><div style="display:flex;margin-left:7px;">Trigger the mutating webhook with Kubernetes eviction objects instead of patching workloads.</div></div>
 <div style="margin-left: 15px">
 
-Instead of patching workloads, or scaling the workloads down to zero and up again, Telepresence will now create policy/v1 Eviction objects to trigger the mutating webhook. This causes a slight change in the traffic-manager RBAC. The `patch` permissions are no longer needed. Instead, the traffic-manager must be able to create "pod/eviction" objects.
+Telepresence will now attempt to evict pods in order to trigger the traffic-agent's injection or removal, and revert to patching workloads if evictions are prevented by the pod's disruption budget. This causes a slight change in the traffic-manager RBAC, as the traffic-manager must be able to create "pod/eviction" objects.
 </div>
 
 ## <div style="display:flex;"><img src="images/change.png" alt="change" style="width:30px;height:fit-content;"/><div style="display:flex;margin-left:7px;">The telepresence-agents configmap is no longer used.</div></div>
@@ -147,19 +141,19 @@ The namespace conflict detection mechanism would only discover conflicts between
 ## <div style="display:flex;"><img src="images/bugfix.png" alt="bugfix" style="width:30px;height:fit-content;"/><div style="display:flex;margin-left:7px;">Don't dispatch DNS discovery queries to the cluster.</div></div>
 <div style="margin-left: 15px">
 
-macOS based systems will often PTR queries using nameslike `b._dns-sd._udp`, lb._dns-sd._udp, or `db-dns-sd._udp`. Those queries are no longer dispatched to the cluster.
+macOS based systems will often PTR queries using nameslike `b._dns-sd._udp`, lb._dns-sd._udp`, or `db-dns-sd._udp`. Those queries are no longer dispatched to the cluster.
 </div>
 
 ## <div style="display:flex;"><img src="images/bugfix.png" alt="bugfix" style="width:30px;height:fit-content;"/><div style="display:flex;margin-left:7px;">Using the --namespace option with telepresence causes a deadlock.</div></div>
 <div style="margin-left: 15px">
 
-Using `telepresence list --namespace <ns> with a namespace different from the one that telepresence was connected to, would cause a deadlock, and then produce an empty list.
+Using `telepresence list --namespace <ns>` with a namespace different from the one that telepresence was connected to, would cause a deadlock, and then produce an empty list.
 </div>
 
 ## <div style="display:flex;"><img src="images/bugfix.png" alt="bugfix" style="width:30px;height:fit-content;"/><div style="display:flex;margin-left:7px;">Fix problem with exclude-suffix being hidden by DNS search path.</div></div>
 <div style="margin-left: 15px">
 
-In some situations, a name ending with an exclude-suffix like "xyz.com" would be expanded by a search path into "xyz.com.<connected namespace>" and therefore not be excluded. Instead, the name was sent to the cluster to be resolved, causing an unnecessary load on its DNS server.
+In some situations, a name ending with an exclude-suffix like "xyz.com" would be expanded by a search path into "xyz.com.&lt;connected namespace&gt;" and therefore not be excluded. Instead, the name was sent to the cluster to be resolved, causing an unnecessary load on its DNS server.
 </div>
 
 ## Version 2.21.3 <span style="font-size: 16px;">(February  6)</span>
@@ -223,16 +217,8 @@ It is now possible to use a virtual subnet without routing the affected IPs to a
 ## <div style="display:flex;"><img src="images/feature.png" alt="feature" style="width:30px;height:fit-content;"/><div style="display:flex;margin-left:7px;">[Intercepts targeting a specific container](reference/engagements/container)</div></div>
 <div style="margin-left: 15px">
 
-In certain scenarios, the container owning the intercepted port differs
-from the container the intercept targets. This port owner's sole purpose
-is to route traffic from the service to the intended container, often
-using a direct localhost connection.
-
-This update introduces a `--container <name>` option to the intercept
-command. While this option doesn't influence the port selection, it
-guarantees that the environment variables and mounts propagated to the
-client originate from the specified container. Additionally, if the
-`--replace` option is used, it ensures that this container is replaced.
+In certain scenarios, the container owning the intercepted port differs from the container the intercept targets. This port owner's sole purpose is to route traffic from the service to the intended container, often using a direct localhost connection.
+This update introduces a `--container <name>` option to the intercept command. While this option doesn't influence the port selection, it guarantees that the environment variables and mounts propagated to the client originate from the specified container. Additionally, if the `--replace` option is used, it ensures that this container is replaced.
 </div>
 
 ## <div style="display:flex;"><img src="images/feature.png" alt="feature" style="width:30px;height:fit-content;"/><div style="display:flex;margin-left:7px;">[New telepresence ingest command](howtos/intercepts#ingest-your-service)</div></div>
