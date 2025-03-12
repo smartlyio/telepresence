@@ -1,6 +1,6 @@
 # Telepresence
 
-[Telepresence](https://www.getambassador.io/products/telepresence/) is a tool
+[Telepresence](https://telepresence.io/) is a tool
 that allows for local development of microservices running in a remote
 Kubernetes cluster.
 
@@ -13,7 +13,7 @@ their services.
 The telepresence binary embeds the helm chart, so the easiest way to install is:
 
 ```sh
-$ telepresence helm install [--set x=y | --values &lt;values file&gt;]
+$ telepresence helm install [--set x=y | --values <values file>]
 ```
 
 ## Configuration

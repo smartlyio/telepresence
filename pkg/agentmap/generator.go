@@ -17,17 +17,8 @@ import (
 	"github.com/telepresenceio/telepresence/v2/pkg/k8sapi"
 )
 
-const (
-	ContainerPortsAnnotation = agentconfig.DomainPrefix + "inject-container-ports"
-	ServicePortsAnnotation   = agentconfig.DomainPrefix + "inject-service-ports"
-	// ServicePortAnnotation is deprecated. Use plural form instead.
-	ServicePortAnnotation = agentconfig.DomainPrefix + "inject-service-port"
-	ServiceNameAnnotation = agentconfig.DomainPrefix + "inject-service-name"
-	ManagerAppName        = "traffic-manager"
-)
-
 var TrafficManagerSelector = labels.SelectorFromSet(map[string]string{ //nolint:gochecknoglobals // constant
-	"app":          ManagerAppName,
+	"app":          agentconfig.ManagerAppName,
 	"telepresence": "manager",
 })
 
@@ -55,9 +46,9 @@ type BasicGeneratorConfig struct {
 	MountPolicies       agentconfig.MountPolicies
 }
 
-func portsFromContainerPortsAnnotation(wl k8sapi.Workload) (ports []agentconfig.PortIdentifier, err error) {
+func portsFromContainerPortsAnnotation(ctx context.Context, wl k8sapi.Workload) (ports []agentconfig.PortIdentifier, err error) {
 	pod := wl.GetPodTemplate()
-	cpa := pod.GetAnnotations()[ContainerPortsAnnotation]
+	cpa := agentconfig.GetAnnotation(ctx, pod.GetAnnotations(), agentconfig.ContainerPortsAnnotation, agentconfig.LegacyContainerPortsAnnotation)
 	switch cpa {
 	case "":
 		return nil, nil
@@ -76,14 +67,7 @@ func portsFromContainerPortsAnnotation(wl k8sapi.Workload) (ports []agentconfig.
 			}
 		}
 	default:
-		ports, err = portsFromAnnotationValue(wl, ContainerPortsAnnotation, cpa)
-	}
-	return ports, err
-}
-
-func portsFromAnnotation(wl k8sapi.Workload, annotation string) (ports []agentconfig.PortIdentifier, err error) {
-	if cpa := wl.GetPodTemplate().GetAnnotations()[annotation]; cpa != "" {
-		ports, err = portsFromAnnotationValue(wl, annotation, cpa)
+		ports, err = portsFromAnnotationValue(wl, agentconfig.ContainerPortsAnnotation, cpa)
 	}
 	return ports, err
 }
@@ -128,7 +112,8 @@ func (cfg *BasicGeneratorConfig) Generate(
 		}
 	}
 
-	svcs, err := FindServicesForPod(ctx, pod, pod.Annotations[ServiceNameAnnotation])
+	ann := agentconfig.GetAnnotation(ctx, pod.Annotations, agentconfig.ServiceNameAnnotation, agentconfig.LegacyServiceNameAnnotation)
+	svcs, err := FindServicesForPod(ctx, pod, ann)
 	if err != nil {
 		return nil, err
 	}
@@ -144,18 +129,15 @@ func (cfg *BasicGeneratorConfig) Generate(
 		return p
 	}
 
-	ports, err := portsFromAnnotation(wl, ServicePortsAnnotation)
-	if err == nil && len(ports) == 0 {
-		// Check singular form.
-		ports, err = portsFromAnnotation(wl, ServicePortAnnotation)
-		if len(ports) > 0 {
-			dlog.Warningf(ctx, "the %q annotation is deprecated. Use plural form %q instead", ServicePortAnnotation, ServicePortsAnnotation)
-		}
+	var ports []agentconfig.PortIdentifier
+	ann = agentconfig.GetAnnotation(ctx, pod.Annotations, agentconfig.ServicePortsAnnotation, agentconfig.LegacyServicePortAnnotation)
+	if ann != "" {
+		ports, err = portsFromAnnotationValue(wl, agentconfig.ServicePortsAnnotation, ann)
 	}
 	if err != nil {
 		return nil, err
 	}
-	cfg.MountPolicies, err = cfg.MountPolicies.AddAnnotations(pod.Annotations)
+	cfg.MountPolicies, err = cfg.MountPolicies.AddAnnotations(ctx, pod.Annotations)
 	if err != nil {
 		return nil, err
 	}
@@ -165,7 +147,7 @@ func (cfg *BasicGeneratorConfig) Generate(
 		ccs = cfg.appendAgentContainerConfigs(ctx, svcImpl, pod, ports, agentPortNumberFunc, ccs, existingConfig)
 	}
 
-	ports, err = portsFromContainerPortsAnnotation(wl)
+	ports, err = portsFromContainerPortsAnnotation(ctx, wl)
 	if err != nil {
 		return nil, err
 	}
@@ -194,7 +176,7 @@ func (cfg *BasicGeneratorConfig) Generate(
 		Namespace:           wl.GetNamespace(),
 		WorkloadName:        wl.GetName(),
 		WorkloadKind:        wl.GetKind(),
-		ManagerHost:         ManagerAppName + "." + cfg.ManagerNamespace,
+		ManagerHost:         agentconfig.ManagerAppName + "." + cfg.ManagerNamespace,
 		ManagerPort:         cfg.ManagerPort,
 		APIPort:             cfg.APIPort,
 		MountPolicies:       cfg.MountPolicies,

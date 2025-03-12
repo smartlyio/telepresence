@@ -96,6 +96,18 @@ The output of the `telepresence list` command will now include the workload kind
 Users can now use the Helm value `agent.initSecurityContext` to override the default securityContext for the Telepresence init-container.
 </div>
 
+## <div style="display:flex;"><img src="images/change.png" alt="change" style="width:30px;height:fit-content;"/><div style="display:flex;margin-left:7px;">Let download page use direct links to GitHub</div></div>
+<div style="margin-left: 15px">
+
+The download links on the release page now points directly to the assets on the download page, instead of using being routed from getambassador.io/download/tel2oss/releases.
+</div>
+
+## <div style="display:flex;"><img src="images/change.png" alt="change" style="width:30px;height:fit-content;"/><div style="display:flex;margin-left:7px;">Use telepresence.io as annotation prefix instead of telepresence.getambassador.io</div></div>
+<div style="margin-left: 15px">
+
+The workload and pod annotations used by Telepresence will now use the prefix `telepresence.io` instead of `telepresence.getambassador.io`. The new prefix is consistent with the prefix used by labels, and it also matches the host name of the documentation site. Annotations using the old name will still work, but warnings will be logged when they are encountered.
+</div>
+
 ## <div style="display:flex;"><img src="images/change.png" alt="change" style="width:30px;height:fit-content;"/><div style="display:flex;margin-left:7px;">Make the DNS recursion check configurable and turn it off by default.</div></div>
 <div style="margin-left: 15px">
 

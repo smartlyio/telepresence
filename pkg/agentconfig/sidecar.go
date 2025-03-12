@@ -1,6 +1,7 @@
 package agentconfig
 
 import (
+	"context"
 	"reflect"
 
 	"github.com/go-json-experiment/json"
@@ -8,6 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/yaml"
 
+	"github.com/datawire/dlib/dlog"
 	"github.com/telepresenceio/telepresence/v2/pkg/k8sapi"
 )
 
@@ -15,22 +17,17 @@ const (
 	// ConfigMap is the name of the ConfigMap that contains the agent configs.
 	ConfigMap = "telepresence-agents"
 
-	ContainerName            = "traffic-agent"
-	InitContainerName        = "tel-agent-init"
-	AnnotationVolumeName     = "traffic-annotations"
-	AnnotationMountPoint     = "/tel_pod_info"
-	TerminatingTLSVolumeName = "traffic-terminating-tls"
-	TerminatingTLSMountPoint = "/terminating_tls"
-	OriginatingTLSVolumeName = "traffic-originating-tls"
-	OriginatingTLSMountPoint = "/originating_tls"
-	MountPrefixApp           = "/tel_app_mounts"
-	ExportsVolumeName        = "export-volume"
-	ExportsMountPoint        = "/tel_app_exports"
-	TempVolumeName           = "tel-agent-tmp"
-	TempMountPoint           = "/tmp"
-	EnvPrefix                = "_TEL_"
-	EnvPrefixAgent           = EnvPrefix + "AGENT_"
-	EnvPrefixApp             = EnvPrefix + "APP_"
+	ContainerName     = "traffic-agent"
+	ManagerAppName    = "traffic-manager"
+	InitContainerName = "tel-agent-init"
+	MountPrefixApp    = "/tel_app_mounts"
+	ExportsVolumeName = "export-volume"
+	ExportsMountPoint = "/tel_app_exports"
+	TempVolumeName    = "tel-agent-tmp"
+	TempMountPoint    = "/tmp"
+	EnvPrefix         = "_TEL_"
+	EnvPrefixAgent    = EnvPrefix + "AGENT_"
+	EnvPrefixApp      = EnvPrefix + "APP_"
 
 	// EnvAgentConfig is the environment variable where the traffic-agent finds its own config.
 	EnvAgentConfig = "AGENT_CONFIG"
@@ -47,23 +44,42 @@ const (
 	// EnvAPIPort is the port number of the Telepresence API server, when it is enabled.
 	EnvAPIPort = "TELEPRESENCE_API_PORT"
 
-	DomainPrefix = "telepresence.getambassador.io/"
+	DomainPrefix = "telepresence.io/"
 
-	RestartedAtAnnotation                = DomainPrefix + "restartedAt"
-	ManualInjectAnnotation               = DomainPrefix + "manually-injected"
-	InjectAnnotation                     = DomainPrefix + "inject-" + ContainerName
-	InjectIgnoreVolumeMounts             = DomainPrefix + "inject-ignore-volume-mounts"
-	VolumeMountPolicies                  = DomainPrefix + "mount-policies"
-	TerminatingTLSSecretAnnotation       = DomainPrefix + "inject-terminating-tls-secret"
-	OriginatingTLSSecretAnnotation       = DomainPrefix + "inject-originating-tls-secret"
-	ConfigAnnotation                     = DomainPrefix + "agent-config"
-	ReplacedContainerAnnotationPrefix    = DomainPrefix + "replaced-container."
-	LegacyTerminatingTLSSecretAnnotation = "getambassador.io/inject-terminating-tls-secret"
-	LegacyOriginatingTLSSecretAnnotation = "getambassador.io/inject-originating-tls-secret"
-	WorkloadNameLabel                    = "telepresence.io/workloadName"
-	WorkloadKindLabel                    = "telepresence.io/workloadKind"
-	WorkloadEnabledLabel                 = "telepresence.io/workloadEnabled"
+	ConfigAnnotation                  = DomainPrefix + "agent-config"
+	ContainerPortsAnnotation          = DomainPrefix + "inject-container-ports"
+	InjectAnnotation                  = DomainPrefix + "inject-" + ContainerName
+	InjectIgnoreVolumeMounts          = DomainPrefix + "inject-ignore-volume-mounts"
+	ManualInjectAnnotation            = DomainPrefix + "manually-injected"
+	ReplacedContainerAnnotationPrefix = DomainPrefix + "replaced-container."
+	RestartedAtAnnotation             = DomainPrefix + "restartedAt"
+	ServiceNameAnnotation             = DomainPrefix + "inject-service-name"
+	ServicePortsAnnotation            = DomainPrefix + "inject-service-ports"
+	VolumeMountPoliciesAnnotation     = DomainPrefix + "mount-policies"
+
+	LegacyDomainPrefix             = "telepresence.getambassador.io/"
+	LegacyContainerPortsAnnotation = LegacyDomainPrefix + "inject-container-ports"
+	LegacyInjectAnnotation         = LegacyDomainPrefix + "inject-" + ContainerName
+	LegacyInjectIgnoreVolumeMounts = LegacyDomainPrefix + "inject-ignore-volume-mounts"
+	LegacyManualInjectAnnotation   = LegacyDomainPrefix + "manually-injected"
+	LegacyServiceNameAnnotation    = LegacyDomainPrefix + "inject-service-name"
+	LegacyServicePortAnnotation    = LegacyDomainPrefix + "inject-service-port"
+
+	WorkloadNameLabel    = DomainPrefix + "workloadName"
+	WorkloadKindLabel    = DomainPrefix + "workloadKind"
+	WorkloadEnabledLabel = DomainPrefix + "workloadEnabled"
 )
+
+func GetAnnotation(ctx context.Context, annotations map[string]string, key, deprecatedKey string) string {
+	value, ok := annotations[key]
+	if !ok {
+		value, ok = annotations[deprecatedKey]
+		if ok {
+			dlog.Warningf(ctx, "Annotation %q is deprecated. Use %q instead", key, value)
+		}
+	}
+	return value
+}
 
 type ReplacePolicy int
 

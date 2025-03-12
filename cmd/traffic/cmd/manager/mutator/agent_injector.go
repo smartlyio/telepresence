@@ -108,7 +108,7 @@ func (a *agentInjector) Inject(ctx context.Context, req *admission.AdmissionRequ
 	dlog.Debugf(ctx, "Handling admission request %s %s.%s", req.Operation, pod.Name, pod.Namespace)
 	env := managerutil.GetEnv(ctx)
 
-	ia := pod.Annotations[agentconfig.InjectAnnotation]
+	ia := agentconfig.GetAnnotation(ctx, pod.Annotations, agentconfig.InjectAnnotation, agentconfig.LegacyInjectAnnotation)
 
 	var scx agentconfig.SidecarExt
 	switch ia {
@@ -164,7 +164,7 @@ func createPatch(ctx context.Context, config *agentconfig.Sidecar, pod *core.Pod
 	patches = addInitContainer(pod, config, patches)
 	patches, annotations = addAgentContainer(ctx, pod, config, patches)
 	patches = addPullSecrets(pod, config, patches)
-	patches = addAgentVolumes(pod, config, patches)
+	patches = addAgentVolumes(pod, patches)
 	patches = hidePorts(pod, config, patches)
 	annotations[agentconfig.InjectAnnotation] = "enabled"
 	patches = addPodAnnotations(pod, annotations, patches)
@@ -279,13 +279,13 @@ func addInitContainer(pod *core.Pod, config *agentconfig.Sidecar, patches PatchO
 	})
 }
 
-func addAgentVolumes(pod *core.Pod, ag *agentconfig.Sidecar, patches PatchOps) PatchOps {
+func addAgentVolumes(pod *core.Pod, patches PatchOps) PatchOps {
 	for _, vol := range pod.Spec.Volumes {
-		if vol.Name == agentconfig.AnnotationVolumeName {
+		if vol.Name == agentconfig.ExportsVolumeName {
 			return patches
 		}
 	}
-	avs := agentconfig.AgentVolumes(ag.AgentName, pod)
+	avs := agentconfig.AgentVolumes()
 	if len(avs) == 0 {
 		return patches
 	}

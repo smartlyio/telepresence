@@ -55,7 +55,7 @@ const mgrNs = "default"
 func TestTrafficAgentConfigGenerator(t *testing.T) {
 	managerConfig := core.ConfigMap{
 		ObjectMeta: meta.ObjectMeta{
-			Name:      agentmap.ManagerAppName,
+			Name:      agentconfig.ManagerAppName,
 			Namespace: mgrNs,
 		},
 		Data: map[string]string{"namespace-selector.yaml": ` 
@@ -90,7 +90,7 @@ matchExpressions:
 		return meta.ObjectMeta{
 			Name:            podName(name),
 			Namespace:       "some-ns",
-			Annotations:     map[string]string{InjectAnnotation: "enabled"},
+			Annotations:     map[string]string{agentconfig.InjectAnnotation: "enabled"},
 			Labels:          map[string]string{labelKey: name},
 			OwnerReferences: podOwner(name),
 		}
@@ -216,7 +216,7 @@ matchExpressions:
 		ObjectMeta: meta.ObjectMeta{
 			Name:            podName("named-and-numeric"),
 			Namespace:       "some-ns",
-			Annotations:     map[string]string{InjectAnnotation: "enabled"},
+			Annotations:     map[string]string{agentconfig.InjectAnnotation: "enabled"},
 			Labels:          map[string]string{"service": "named-port", "app": "numeric-port"},
 			OwnerReferences: podOwner("named-and-numeric"),
 		},
@@ -275,7 +275,7 @@ matchExpressions:
 		ObjectMeta: meta.ObjectMeta{
 			Name:            podName("multi-port"),
 			Namespace:       "some-ns",
-			Annotations:     map[string]string{InjectAnnotation: "enabled"},
+			Annotations:     map[string]string{agentconfig.InjectAnnotation: "enabled"},
 			Labels:          map[string]string{"service": "multi-port"},
 			OwnerReferences: podOwner("multi-port"),
 		},
@@ -315,7 +315,7 @@ matchExpressions:
 		ObjectMeta: meta.ObjectMeta{
 			Name:            podName("multi-container"),
 			Namespace:       "some-ns",
-			Annotations:     map[string]string{InjectAnnotation: "enabled"},
+			Annotations:     map[string]string{agentconfig.InjectAnnotation: "enabled"},
 			Labels:          map[string]string{"service": "multi-port"},
 			OwnerReferences: podOwner("multi-container"),
 		},
@@ -927,7 +927,7 @@ func TestTrafficAgentInjector(t *testing.T) {
 	one := int32(1)
 	managerConfig := core.ConfigMap{
 		ObjectMeta: meta.ObjectMeta{
-			Name:      agentmap.ManagerAppName,
+			Name:      agentconfig.ManagerAppName,
 			Namespace: mgrNs,
 		},
 		Data: map[string]string{"namespace-selector.yaml": ` 
@@ -964,7 +964,7 @@ matchExpressions:
 		return meta.ObjectMeta{
 			Name:            podName(name),
 			Namespace:       "some-ns",
-			Annotations:     map[string]string{InjectAnnotation: "enabled"},
+			Annotations:     map[string]string{agentconfig.InjectAnnotation: "enabled"},
 			Labels:          map[string]string{"service": name},
 			OwnerReferences: podOwner(name),
 			UID:             types.UID(uuid.New().String()),
@@ -1138,7 +1138,7 @@ matchExpressions:
 			"Skip Precondition: No name/namespace",
 			&core.Pod{
 				ObjectMeta: meta.ObjectMeta{Annotations: map[string]string{
-					InjectAnnotation: "enabled",
+					agentconfig.InjectAnnotation: "enabled",
 				}},
 			},
 			false,
@@ -1183,7 +1183,7 @@ matchExpressions:
       valueFrom:
         fieldRef:
           apiVersion: v1
-          fieldPath: metadata.annotations['telepresence.getambassador.io/agent-config']
+          fieldPath: metadata.annotations['telepresence.io/agent-config']
     - name: _TEL_AGENT_POD_IP
       valueFrom:
         fieldRef:
@@ -1212,8 +1212,6 @@ matchExpressions:
         - /tmp/agent/ready
     resources: {}
     volumeMounts:
-    - mountPath: /tel_pod_info
-      name: traffic-annotations
     - mountPath: /tel_app_exports
       name: export-volume
     - mountPath: /tmp
@@ -1221,13 +1219,6 @@ matchExpressions:
 - op: replace
   path: /spec/volumes
   value:
-  - downwardAPI:
-      items:
-      - fieldRef:
-          apiVersion: v1
-          fieldPath: metadata.annotations
-        path: annotations
-    name: traffic-annotations
   - emptyDir: {}
     name: export-volume
   - emptyDir: {}
@@ -1238,8 +1229,8 @@ matchExpressions:
 - op: replace
   path: /metadata/annotations
   value:
-    telepresence.getambassador.io/agent-config: '%s'
-    telepresence.getambassador.io/inject-traffic-agent: enabled
+    telepresence.io/agent-config: '%s'
+    telepresence.io/inject-traffic-agent: enabled
 - op: replace
   path: /metadata/labels
   value:
@@ -1282,7 +1273,7 @@ matchExpressions:
       valueFrom:
         fieldRef:
           apiVersion: v1
-          fieldPath: metadata.annotations['telepresence.getambassador.io/agent-config']
+          fieldPath: metadata.annotations['telepresence.io/agent-config']
     - name: _TEL_AGENT_POD_IP
       valueFrom:
         fieldRef:
@@ -1311,8 +1302,6 @@ matchExpressions:
         - /tmp/agent/ready
     resources: {}
     volumeMounts:
-    - mountPath: /tel_pod_info
-      name: traffic-annotations
     - mountPath: /tel_app_exports
       name: export-volume
     - mountPath: /tmp
@@ -1320,13 +1309,6 @@ matchExpressions:
 - op: replace
   path: /spec/volumes
   value:
-  - downwardAPI:
-      items:
-      - fieldRef:
-          apiVersion: v1
-          fieldPath: metadata.annotations
-        path: annotations
-    name: traffic-annotations
   - emptyDir: {}
     name: export-volume
   - emptyDir: {}
@@ -1337,8 +1319,8 @@ matchExpressions:
 - op: replace
   path: /metadata/annotations
   value:
-    telepresence.getambassador.io/agent-config: '%s'
-    telepresence.getambassador.io/inject-traffic-agent: enabled
+    telepresence.io/agent-config: '%s'
+    telepresence.io/inject-traffic-agent: enabled
 - op: replace
   path: /metadata/labels
   value:
@@ -1368,8 +1350,8 @@ matchExpressions:
 					Namespace: "some-ns",
 					Labels:    map[string]string{"service": "named-port"},
 					Annotations: map[string]string{
-						InjectAnnotation:      "enabled",
-						ServiceNameAnnotation: "khruangbin",
+						agentconfig.InjectAnnotation:      "enabled",
+						agentconfig.ServiceNameAnnotation: "khruangbin",
 					},
 					OwnerReferences: podOwner("named-port"),
 				},
@@ -1389,7 +1371,7 @@ matchExpressions:
 			},
 			true,
 			"",
-			"unable to find service khruangbin specified by annotation telepresence.getambassador.io/inject-service-name declared in pod <PODNAME>",
+			"unable to find service khruangbin specified by annotation telepresence.io/inject-service-name declared in pod <PODNAME>",
 			nil,
 		},
 		{
@@ -1400,8 +1382,8 @@ matchExpressions:
 					Namespace: "some-ns",
 					Labels:    map[string]string{"service": "named-port"},
 					Annotations: map[string]string{
-						InjectAnnotation:      "enabled",
-						ServiceNameAnnotation: "named-port",
+						agentconfig.InjectAnnotation:      "enabled",
+						agentconfig.ServiceNameAnnotation: "named-port",
 					},
 					OwnerReferences: podOwner("named-port"),
 				},
@@ -1430,7 +1412,7 @@ matchExpressions:
       valueFrom:
         fieldRef:
           apiVersion: v1
-          fieldPath: metadata.annotations['telepresence.getambassador.io/agent-config']
+          fieldPath: metadata.annotations['telepresence.io/agent-config']
     - name: _TEL_AGENT_POD_IP
       valueFrom:
         fieldRef:
@@ -1459,8 +1441,6 @@ matchExpressions:
         - /tmp/agent/ready
     resources: {}
     volumeMounts:
-    - mountPath: /tel_pod_info
-      name: traffic-annotations
     - mountPath: /tel_app_exports
       name: export-volume
     - mountPath: /tmp
@@ -1468,13 +1448,6 @@ matchExpressions:
 - op: replace
   path: /spec/volumes
   value:
-  - downwardAPI:
-      items:
-      - fieldRef:
-          apiVersion: v1
-          fieldPath: metadata.annotations
-        path: annotations
-    name: traffic-annotations
   - emptyDir: {}
     name: export-volume
   - emptyDir: {}
@@ -1485,9 +1458,9 @@ matchExpressions:
 - op: replace
   path: /metadata/annotations
   value:
-    telepresence.getambassador.io/agent-config: '%s'
-    telepresence.getambassador.io/inject-service-name: named-port
-    telepresence.getambassador.io/inject-traffic-agent: enabled
+    telepresence.io/agent-config: '%s'
+    telepresence.io/inject-service-name: named-port
+    telepresence.io/inject-traffic-agent: enabled
 - op: replace
   path: /metadata/labels
   value:
@@ -1525,7 +1498,7 @@ matchExpressions:
       valueFrom:
         fieldRef:
           apiVersion: v1
-          fieldPath: metadata.annotations['telepresence.getambassador.io/agent-config']
+          fieldPath: metadata.annotations['telepresence.io/agent-config']
     - name: POD_IP
       valueFrom:
         fieldRef:
@@ -1548,7 +1521,7 @@ matchExpressions:
       valueFrom:
         fieldRef:
           apiVersion: v1
-          fieldPath: metadata.annotations['telepresence.getambassador.io/agent-config']
+          fieldPath: metadata.annotations['telepresence.io/agent-config']
     - name: _TEL_AGENT_POD_IP
       valueFrom:
         fieldRef:
@@ -1576,8 +1549,6 @@ matchExpressions:
         - /tmp/agent/ready
     resources: {}
     volumeMounts:
-    - mountPath: /tel_pod_info
-      name: traffic-annotations
     - mountPath: /tel_app_exports
       name: export-volume
     - mountPath: /tmp
@@ -1585,13 +1556,6 @@ matchExpressions:
 - op: replace
   path: /spec/volumes
   value:
-  - downwardAPI:
-      items:
-      - fieldRef:
-          apiVersion: v1
-          fieldPath: metadata.annotations
-        path: annotations
-    name: traffic-annotations
   - emptyDir: {}
     name: export-volume
   - emptyDir: {}
@@ -1599,8 +1563,8 @@ matchExpressions:
 - op: replace
   path: /metadata/annotations
   value:
-    telepresence.getambassador.io/agent-config: '%s'
-    telepresence.getambassador.io/inject-traffic-agent: enabled
+    telepresence.io/agent-config: '%s'
+    telepresence.io/inject-traffic-agent: enabled
 - op: replace
   path: /metadata/labels
   value:
@@ -1642,7 +1606,7 @@ matchExpressions:
       valueFrom:
         fieldRef:
           apiVersion: v1
-          fieldPath: metadata.annotations['telepresence.getambassador.io/agent-config']
+          fieldPath: metadata.annotations['telepresence.io/agent-config']
     - name: POD_IP
       valueFrom:
         fieldRef:
@@ -1665,7 +1629,7 @@ matchExpressions:
       valueFrom:
         fieldRef:
           apiVersion: v1
-          fieldPath: metadata.annotations['telepresence.getambassador.io/agent-config']
+          fieldPath: metadata.annotations['telepresence.io/agent-config']
     - name: _TEL_AGENT_POD_IP
       valueFrom:
         fieldRef:
@@ -1693,8 +1657,6 @@ matchExpressions:
         - /tmp/agent/ready
     resources: {}
     volumeMounts:
-    - mountPath: /tel_pod_info
-      name: traffic-annotations
     - mountPath: /tel_app_exports
       name: export-volume
     - mountPath: /tmp
@@ -1702,13 +1664,6 @@ matchExpressions:
 - op: replace
   path: /spec/volumes
   value:
-  - downwardAPI:
-      items:
-      - fieldRef:
-          apiVersion: v1
-          fieldPath: metadata.annotations
-        path: annotations
-    name: traffic-annotations
   - emptyDir: {}
     name: export-volume
   - emptyDir: {}
@@ -1716,8 +1671,8 @@ matchExpressions:
 - op: replace
   path: /metadata/annotations
   value:
-    telepresence.getambassador.io/agent-config: '%s'
-    telepresence.getambassador.io/inject-traffic-agent: enabled
+    telepresence.io/agent-config: '%s'
+    telepresence.io/inject-traffic-agent: enabled
 - op: replace
   path: /metadata/labels
   value:
@@ -1776,7 +1731,7 @@ matchExpressions:
 								ValueFrom: &core.EnvVarSource{
 									FieldRef: &core.ObjectFieldSelector{
 										APIVersion: "v1",
-										FieldPath:  "metadata.annotations['telepresence.getambassador.io/agent-config']",
+										FieldPath:  "metadata.annotations['telepresence.io/agent-config']",
 									},
 								},
 							},
@@ -1818,7 +1773,7 @@ matchExpressions:
 									ValueFrom: &core.EnvVarSource{
 										FieldRef: &core.ObjectFieldSelector{
 											APIVersion: "v1",
-											FieldPath:  "metadata.annotations['telepresence.getambassador.io/agent-config']",
+											FieldPath:  "metadata.annotations['telepresence.io/agent-config']",
 										},
 									},
 								},
@@ -1855,15 +1810,11 @@ matchExpressions:
 							TerminationMessagePolicy: "File",
 							VolumeMounts: []core.VolumeMount{
 								{
-									Name:      "traffic-annotations",
-									MountPath: "/tel_pod_info",
-								},
-								{
-									Name:      "export-volume",
+									Name:      agentconfig.ExportsVolumeName,
 									MountPath: "/tel_app_exports",
 								},
 								{
-									Name:      "tel-agent-tmp",
+									Name:      agentconfig.TempVolumeName,
 									MountPath: "/tmp",
 								},
 							},
@@ -1874,9 +1825,20 @@ matchExpressions:
 							},
 						},
 					},
-					Volumes: []core.Volume{{
-						Name: agentconfig.AnnotationVolumeName,
-					}},
+					Volumes: []core.Volume{
+						{
+							Name: agentconfig.ExportsVolumeName,
+							VolumeSource: core.VolumeSource{
+								EmptyDir: &core.EmptyDirVolumeSource{},
+							},
+						},
+						{
+							Name: agentconfig.TempVolumeName,
+							VolumeSource: core.VolumeSource{
+								EmptyDir: &core.EmptyDirVolumeSource{},
+							},
+						},
+					},
 				},
 			},
 			true,
@@ -1947,7 +1909,7 @@ matchExpressions:
       valueFrom:
         fieldRef:
           apiVersion: v1
-          fieldPath: metadata.annotations['telepresence.getambassador.io/agent-config']
+          fieldPath: metadata.annotations['telepresence.io/agent-config']
     - name: _TEL_AGENT_POD_IP
       valueFrom:
         fieldRef:
@@ -1979,22 +1941,10 @@ matchExpressions:
     - mountPath: /tel_app_mounts/some-container/var/run/secrets/kubernetes.io/serviceaccount
       name: $(_TEL_APP_A_TOKEN_VOLUME)
       readOnly: true
-    - mountPath: /tel_pod_info
-      name: traffic-annotations
     - mountPath: /tel_app_exports
       name: export-volume
     - mountPath: /tmp
       name: tel-agent-tmp
-- op: add
-  path: /spec/volumes/-
-  value:
-    downwardAPI:
-      items:
-      - fieldRef:
-          apiVersion: v1
-          fieldPath: metadata.annotations
-        path: annotations
-    name: traffic-annotations
 - op: add
   path: /spec/volumes/-
   value:
@@ -2011,8 +1961,8 @@ matchExpressions:
 - op: replace
   path: /metadata/annotations
   value:
-    telepresence.getambassador.io/agent-config: '%s'
-    telepresence.getambassador.io/inject-traffic-agent: enabled
+    telepresence.io/agent-config: '%s'
+    telepresence.io/inject-traffic-agent: enabled
 - op: replace
   path: /metadata/labels
   value:
