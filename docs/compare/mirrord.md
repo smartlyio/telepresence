@@ -44,33 +44,33 @@ Unless using "mirrord for Teams" (proprietary), all users must have permissions 
 
 This comparison chart applies to the Open Source editions of both products.
 
-| Feature                                                                   | Telepresence | mirrord |
-|---------------------------------------------------------------------------|--------------|---------|
-| Connect your local process to Kubernetes                                  | ✅            | ✅       |
-| Works without root permission                                             | ✅ [^1]       | ✅       |
-| Compatible with clusters of any size                                      | ✅            | ✅       |
-| Works without restarting the remote service                               | ✅ [^2]       | ✅       |
-| Doesn't require a sidecar                                                 | ✅ [^3]       | ✅       |
-| Supports connecting to clusters over a corporate VPN                      | ✅            | ✅       |
-| Can intercept traffic                                                     | ✅            | ✅       |
-| Can ingest a container                                                    | ✅            | ❌       |
-| Can replace a container                                                   | ✅            | ❌       |
-| Can mirror traffic                                                        | ❌            | ✅       |
-| Can act as a cluster VPN only                                             | ✅            | ❌       |
-| Will work with statically linked binaries                                 | ✅            | ❌       |
-| Runs natively on windows                                                  | ✅            | ❌       |
-| Can intercept traffic to and from pod's localhost                         | ✅            | ❌       |
-| Remotely mounted file system available from all applications              | ✅            | ❌       |
-| Cluster network available to all applications (including browser)         | ✅            | ❌       |
-| Can run the same docker container locally without rebuilding it           | ✅            | ❌       |
-| Provides remote mounts as volumes in docker                               | ✅            | ❌       |
-| Does not require special capabilites such as CAP_SYS_ADMIN in the cluster | ✅            | ❌       |
-| Centralized client configuration using Helm chart                         | ✅            | ❌       |
-| Installed using a JSON-schema validated Helm chart                        | ✅            | ❌       |
-| Client need no special RBAC permissions                                   | ✅            | ❌       |
+| Feature                                                                    | Telepresence | mirrord |
+|----------------------------------------------------------------------------|--------------|---------|
+| Run or Debug your cluster containers locally                               | ✅            | ✅       |
+| Does not need administrative permission on workstation                     | ✅ [^1]       | ✅       |
+| Can be used with very large clusters                                       | ✅            | ✅       |
+| Works without interrupting the remote service                              | ✅ [^2]       | ✅       |
+| Doesn't require injection of a sidecar                                     | ✅ [^3]       | ✅       |
+| Supports connecting to clusters over a corporate VPN                       | ✅            | ✅       |
+| Can intercept traffic                                                      | ✅            | ✅       |
+| Can ingest a container                                                     | ✅            | ❌       |
+| Can replace a container                                                    | ✅            | ❌       |
+| Can mirror traffic                                                         | ❌            | ✅       |
+| Can act as a cluster VPN only                                              | ✅            | ❌       |
+| Will work with statically linked binaries                                  | ✅            | ❌       |
+| Runs natively on windows                                                   | ✅            | ❌       |
+| Can intercept traffic to and from pod's localhost                          | ✅            | ❌       |
+| Remotely mounted file system available from all applications               | ✅            | ❌       |
+| Cluster network available to all applications (including browser)          | ✅            | ❌       |
+| Can run the same docker container locally without rebuilding it            | ✅            | ❌       |
+| Provides remote mounts as volumes in docker                                | ✅            | ❌       |
+| Does not require special capabilities such as CAP_SYS_ADMIN in the cluster | ✅            | ❌       |
+| Centralized client configuration using Helm chart                          | ✅            | ❌       |
+| Installed using a JSON-schema validated Helm chart                         | ✅            | ❌       |
+| Client need no special RBAC permissions                                    | ✅            | ❌       |
 
 [^1]: Telepresence will not require root access on the workstation when running in docker mode.
 
 [^2]: The remote service will only restart when a traffic-agent sidecar is installed. Pod disruption budgets or pre-installed agents can be used to avoid interruptions.
 
-[^3]: A traffic-agent is only necessary when engaging with a pod. It is unnecessary when using Telepresence as a VPN.
+[^3]: A traffic-agent is necessary when engaging with a pod. It is unnecessary when using Telepresence as a VPN.
