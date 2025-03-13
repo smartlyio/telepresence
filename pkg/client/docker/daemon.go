@@ -14,7 +14,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/network"
@@ -402,7 +401,7 @@ func LaunchDaemon(ctx context.Context, daemonID *daemon.Identifier) (conn *grpc.
 // addrPort on the host. Zero is returned when the addrPort is not found among
 // the container's port bindings.
 // The additional bool is true if the host address is IPv6.
-func containerPort(addrPort netip.AddrPort, ns *types.NetworkSettings) (port uint16, isIPv6 bool) {
+func containerPort(addrPort netip.AddrPort, ns *container.NetworkSettings) (port uint16, isIPv6 bool) {
 	for portDef, bindings := range ns.Ports {
 		if portDef.Proto() != "tcp" {
 			continue
@@ -425,7 +424,7 @@ func containerPort(addrPort netip.AddrPort, ns *types.NetworkSettings) (port uin
 }
 
 // runningContainers returns the inspect data for all containers with status=running.
-func runningContainers(ctx context.Context, cli dockerClient.APIClient) []types.ContainerJSON {
+func runningContainers(ctx context.Context, cli dockerClient.APIClient) []container.InspectResponse {
 	cl, err := cli.ContainerList(ctx, container.ListOptions{
 		Filters: filters.NewArgs(filters.KeyValuePair{Key: "status", Value: "running"}),
 	})
@@ -433,7 +432,7 @@ func runningContainers(ctx context.Context, cli dockerClient.APIClient) []types.
 		dlog.Errorf(ctx, "failed to list containers: %v", err)
 		return nil
 	}
-	cjs := make([]types.ContainerJSON, 0, len(cl))
+	cjs := make([]container.InspectResponse, 0, len(cl))
 	for _, cn := range cl {
 		cj, err := cli.ContainerInspect(ctx, cn.ID)
 		if err != nil {
@@ -531,7 +530,7 @@ func detectK3sControlPlaneNode(ctx context.Context) (addr netip.Addr) {
 // "name.minikube.sigs.k8s.io" label is equal to the given cluster name.
 // Returns the internal IP:port for the given hostAddrPort and the name of a network that makes the
 // IP available.
-func detectMinikube(ctx context.Context, cns []types.ContainerJSON, hostAddrPort netip.AddrPort, clusterName string) (netip.AddrPort, string) {
+func detectMinikube(ctx context.Context, cns []container.InspectResponse, hostAddrPort netip.AddrPort, clusterName string) (netip.AddrPort, string) {
 	if useMinikubeNetwork(ctx, hostAddrPort.Addr()) {
 		return hostAddrPort, "minikube"
 	}
@@ -556,7 +555,7 @@ func detectMinikube(ctx context.Context, cns []types.ContainerJSON, hostAddrPort
 // "io.x-k8s.kind.role" label is equal to "control-plane".
 // Returns the internal hostname:port for the given hostAddrPort and the name of a network that makes the
 // hostname available.
-func detectKind(ctx context.Context, cns []types.ContainerJSON, hostAddrPort netip.AddrPort) (netip.AddrPort, string) {
+func detectKind(ctx context.Context, cns []container.InspectResponse, hostAddrPort netip.AddrPort) (netip.AddrPort, string) {
 	for _, cn := range cns {
 		if cfg, ns := cn.Config, cn.NetworkSettings; cfg != nil && ns != nil && cfg.Labels["io.x-k8s.kind.role"] == "control-plane" {
 			if port, isIPv6 := containerPort(hostAddrPort, ns); port != 0 {

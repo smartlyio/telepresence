@@ -28,6 +28,8 @@
       link: howtos/large-clusters
     - title: Host a cluster in Docker or a VM
       link: howtos/cluster-in-vm
+    - title: Use Telepresence with Azure (Microsoft Learn)
+      link: https://learn.microsoft.com/en-us/azure/aks/use-telepresence-aks
 - title: Technical reference
   items:
     - title: Architecture
@@ -66,6 +68,10 @@
       link: reference/routing
     - title: Monitoring
       link: reference/monitoring
+- title: Comparisons
+  items:
+    - title: Telepresence vs mirrord
+      link: compare/mirrord
 - title: FAQs
   link: faqs
 - title: Troubleshooting

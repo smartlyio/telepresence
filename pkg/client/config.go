@@ -34,8 +34,8 @@ import (
 type DefaultsAware interface {
 	defaults() DefaultsAware
 	IsZero() bool
-	MarshalJSONTo(out *jsontext.Encoder, opts json.Options) error
-	UnmarshalJSONFrom(in *jsontext.Decoder, opts json.Options) error
+	MarshalJSONTo(out *jsontext.Encoder) error
+	UnmarshalJSONFrom(in *jsontext.Decoder) error
 }
 
 func jsonName(f reflect.StructField) string {
@@ -550,17 +550,17 @@ func (t *Timeouts) IsZero() bool {
 	return t == nil || *t == defaultTimeouts
 }
 
-func (t *Timeouts) MarshalJSONTo(out *jsontext.Encoder, opts json.Options) error {
-	return json.MarshalEncode(out, mapWithoutDefaults(t), opts)
+func (t *Timeouts) MarshalJSONTo(out *jsontext.Encoder) error {
+	return json.MarshalEncode(out, mapWithoutDefaults(t))
 }
 
-func (t *Timeouts) UnmarshalJSONFrom(in *jsontext.Decoder, opts json.Options) error {
+func (t *Timeouts) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	// Prevent that the original object is cleared when an empty object is decoded by passing the address
 	// of the pointer to the object. The unmarshal will then instead clear the pointer (wp becomes nil) and
 	// leave the underlying object intact. In other words, this code achieves "omitempty" during unmarshal.
 	type wt Timeouts
 	wp := (*wt)(t)
-	return json.UnmarshalDecode(in, &wp, opts)
+	return json.UnmarshalDecode(in, &wp)
 }
 
 const (
@@ -592,17 +592,17 @@ func (ll *LogLevels) IsZero() bool {
 	return ll == nil || *ll == defaultLogLevels
 }
 
-func (ll *LogLevels) MarshalJSONTo(out *jsontext.Encoder, opts json.Options) error {
-	return json.MarshalEncode(out, mapWithoutDefaults(ll), opts)
+func (ll *LogLevels) MarshalJSONTo(out *jsontext.Encoder) error {
+	return json.MarshalEncode(out, mapWithoutDefaults(ll))
 }
 
-func (ll *LogLevels) UnmarshalJSONFrom(in *jsontext.Decoder, opts json.Options) error {
+func (ll *LogLevels) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	// Prevent that the original object is cleared when an empty object is decoded by passing the address
 	// of the pointer to the object. The unmarshal will then instead clear the pointer (wp becomes nil) and
 	// leave the underlying object intact. In other words, this code achieves "omitempty" during unmarshal.
 	type wt LogLevels
 	wp := (*wt)(ll)
-	return json.UnmarshalDecode(in, &wp, opts)
+	return json.UnmarshalDecode(in, &wp)
 }
 
 type Images struct {
@@ -634,17 +634,17 @@ func (img *Images) IsZero() bool {
 	return img == nil || *img == defaultImages
 }
 
-func (img *Images) MarshalJSONTo(out *jsontext.Encoder, opts json.Options) error {
-	return json.MarshalEncode(out, mapWithoutDefaults(img), opts)
+func (img *Images) MarshalJSONTo(out *jsontext.Encoder) error {
+	return json.MarshalEncode(out, mapWithoutDefaults(img))
 }
 
-func (img *Images) UnmarshalJSONFrom(in *jsontext.Decoder, opts json.Options) error {
+func (img *Images) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	// Prevent that the original object is cleared when an empty object is decoded by passing the address
 	// of the pointer to the object. The unmarshal will then instead clear the pointer (wp becomes nil) and
 	// leave the underlying object intact. In other words, this code achieves "omitempty" during unmarshal.
 	type wt Images
 	wp := (*wt)(img)
-	return json.UnmarshalDecode(in, &wp, opts)
+	return json.UnmarshalDecode(in, &wp)
 }
 
 func (img *Images) Registry(c context.Context) string {
@@ -728,17 +728,17 @@ func (tm *Telemount) IsZero() bool {
 	return *tm == defaultTelemount
 }
 
-func (tm *Telemount) MarshalJSONTo(out *jsontext.Encoder, opts json.Options) error {
-	return json.MarshalEncode(out, mapWithoutDefaults(tm), opts)
+func (tm *Telemount) MarshalJSONTo(out *jsontext.Encoder) error {
+	return json.MarshalEncode(out, mapWithoutDefaults(tm))
 }
 
-func (tm *Telemount) UnmarshalJSONFrom(in *jsontext.Decoder, opts json.Options) error {
+func (tm *Telemount) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	// Prevent that the original object is cleared when an empty object is decoded by passing the address
 	// of the pointer to the object. The unmarshal will then instead clear the pointer (wp becomes nil) and
 	// leave the underlying object intact. In other words, this code achieves "omitempty" during unmarshal.
 	type wt Telemount
 	wp := (*wt)(tm)
-	return json.UnmarshalDecode(in, &wp, opts)
+	return json.UnmarshalDecode(in, &wp)
 }
 
 var defaultIntercept = Intercept{ //nolint:gochecknoglobals // constant
@@ -775,17 +775,17 @@ func (ic *Intercept) IsZero() bool {
 	return ic == nil || *ic == defaultIntercept
 }
 
-func (ic *Intercept) MarshalJSONTo(out *jsontext.Encoder, opts json.Options) error {
-	return json.MarshalEncode(out, mapWithoutDefaults(ic), opts)
+func (ic *Intercept) MarshalJSONTo(out *jsontext.Encoder) error {
+	return json.MarshalEncode(out, mapWithoutDefaults(ic))
 }
 
-func (ic *Intercept) UnmarshalJSONFrom(in *jsontext.Decoder, opts json.Options) error {
+func (ic *Intercept) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	// Prevent that the original object is cleared when an empty object is decoded by passing the address
 	// of the pointer to the object. The unmarshal will then instead clear the pointer (wp becomes nil) and
 	// leave the underlying object intact. In other words, this code achieves "omitempty" during unmarshal.
 	type wt Intercept
 	wp := (*wt)(ic)
-	return json.UnmarshalDecode(in, &wp, opts)
+	return json.UnmarshalDecode(in, &wp)
 }
 
 type Cluster struct {
@@ -823,17 +823,17 @@ func (cc *Cluster) IsZero() bool {
 	return cc == nil || isDefault(cc)
 }
 
-func (cc *Cluster) MarshalJSONTo(out *jsontext.Encoder, opts json.Options) error {
-	return json.MarshalEncode(out, mapWithoutDefaults(cc), opts)
+func (cc *Cluster) MarshalJSONTo(out *jsontext.Encoder) error {
+	return json.MarshalEncode(out, mapWithoutDefaults(cc))
 }
 
-func (cc *Cluster) UnmarshalJSONFrom(in *jsontext.Decoder, opts json.Options) error {
+func (cc *Cluster) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	// Prevent that the original object is cleared when an empty object is decoded by passing the address
 	// of the pointer to the object. The unmarshal will then instead clear the pointer (wp becomes nil) and
 	// leave the underlying object intact. In other words, this code achieves "omitempty" during unmarshal.
 	type wt Cluster
 	wp := (*wt)(cc)
-	return json.UnmarshalDecode(in, &wp, opts)
+	return json.UnmarshalDecode(in, &wp)
 }
 
 type Routing struct {
@@ -905,17 +905,17 @@ func (r *Routing) IsZero() bool {
 	return r == nil || isDefault(r)
 }
 
-func (r *Routing) MarshalJSONTo(out *jsontext.Encoder, opts json.Options) error {
-	return json.MarshalEncode(out, mapWithoutDefaults(r), opts)
+func (r *Routing) MarshalJSONTo(out *jsontext.Encoder) error {
+	return json.MarshalEncode(out, mapWithoutDefaults(r))
 }
 
-func (r *Routing) UnmarshalJSONFrom(in *jsontext.Decoder, opts json.Options) error {
+func (r *Routing) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	// Prevent that the original object is cleared when an empty object is decoded by passing the address
 	// of the pointer to the object. The unmarshal will then instead clear the pointer (wp becomes nil) and
 	// leave the underlying object intact. In other words, this code achieves "omitempty" during unmarshal.
 	type wt Routing
 	wp := (*wt)(r)
-	return json.UnmarshalDecode(in, &wp, opts)
+	return json.UnmarshalDecode(in, &wp)
 }
 
 func (d *DNS) Equal(o *DNS) bool {
@@ -957,17 +957,17 @@ func (d *DNS) IsZero() bool {
 	return d == nil || d.Equal(&defaultDNS)
 }
 
-func (d *DNS) MarshalJSONTo(out *jsontext.Encoder, opts json.Options) error {
-	return json.MarshalEncode(out, mapWithoutDefaults(d), opts)
+func (d *DNS) MarshalJSONTo(out *jsontext.Encoder) error {
+	return json.MarshalEncode(out, mapWithoutDefaults(d))
 }
 
-func (d *DNS) UnmarshalJSONFrom(in *jsontext.Decoder, opts json.Options) error {
+func (d *DNS) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	// Prevent that the original object is cleared when an empty object is decoded by passing the address
 	// of the pointer to the object. The unmarshal will then instead clear the pointer (wp becomes nil) and
 	// leave the underlying object intact. In other words, this code achieves "omitempty" during unmarshal.
 	type wt DNS
 	wp := (*wt)(d)
-	return json.UnmarshalDecode(in, &wp, opts)
+	return json.UnmarshalDecode(in, &wp)
 }
 
 type configKey struct{}

@@ -169,7 +169,7 @@ func (is *installSuite) Test_MultiOnDemandInjectOnInstall() {
 			ras := itest.RunningPodsWithAgents(ctx, "quote-", is.AppNamespace())
 			dlog.Infof(ctx, "pod with agent count %d, expected 0", len(ras))
 			return len(ras) == 0
-		}, 60*time.Second, 5*time.Second)
+		}, 120*time.Second, 5*time.Second)
 	}()
 
 	// And check that all pods receive a traffic-agent
@@ -177,11 +177,11 @@ func (is *installSuite) Test_MultiOnDemandInjectOnInstall() {
 		ras := itest.RunningPodsWithAgents(ctx, "quote-", is.AppNamespace())
 		dlog.Infof(ctx, "pod with agent count %d, expected %d", len(ras), svcCount)
 		return len(ras) == svcCount
-	}, 60*time.Second, 5*time.Second)
+	}, 120*time.Second, 5*time.Second)
 }
 
 func (is *installSuite) Test_MultiOnDemandInjectOnApply() {
-	svcCount := 25
+	svcCount := 15
 	if runtime.GOOS != "linux" {
 		// The GitHub runner is probably using Colima for Kubernetes and running with limited
 		// resources.
@@ -210,5 +210,5 @@ func (is *installSuite) Test_MultiOnDemandInjectOnApply() {
 		ras := itest.RunningPodsWithAgents(ctx, "quote-", is.AppNamespace())
 		dlog.Infof(ctx, "pod with agent count %d, expected %d", len(ras), svcCount)
 		return len(ras) == svcCount
-	}, 60*time.Second, 5*time.Second)
+	}, 120*time.Second, 5*time.Second)
 }

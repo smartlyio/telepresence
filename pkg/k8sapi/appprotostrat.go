@@ -41,8 +41,8 @@ func NewAppProtocolStrategy(s string) (AppProtocolStrategy, error) {
 	return 0, fmt.Errorf("invalid AppProtcolStrategy: %q", s)
 }
 
-func (aps AppProtocolStrategy) MarshalJSONTo(out *jsontext.Encoder, opts json.Options) error {
-	return json.MarshalEncode(out, aps.String(), opts)
+func (aps AppProtocolStrategy) MarshalJSONTo(out *jsontext.Encoder) error {
+	return json.MarshalEncode(out, aps.String())
 }
 
 func (aps *AppProtocolStrategy) EnvDecode(val string) (err error) {
@@ -56,9 +56,9 @@ func (aps *AppProtocolStrategy) EnvDecode(val string) (err error) {
 	return nil
 }
 
-func (aps *AppProtocolStrategy) UnmarshalJSONFrom(in *jsontext.Decoder, opts json.Options) error {
+func (aps *AppProtocolStrategy) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	var s string
-	err := json.UnmarshalDecode(in, &s, opts)
+	err := json.UnmarshalDecode(in, &s)
 	if err == nil {
 		err = aps.EnvDecode(s)
 	}

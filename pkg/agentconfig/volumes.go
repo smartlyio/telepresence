@@ -39,13 +39,13 @@ func (mp MountPolicy) String() string {
 	return "Unknown"
 }
 
-func (mp MountPolicy) MarshalJSONTo(out *jsontext.Encoder, opts json.Options) error {
-	return json.MarshalEncode(out, mp.String(), opts)
+func (mp MountPolicy) MarshalJSONTo(out *jsontext.Encoder) error {
+	return json.MarshalEncode(out, mp.String())
 }
 
-func (mp *MountPolicy) UnmarshalJSONFrom(in *jsontext.Decoder, opts json.Options) error {
+func (mp *MountPolicy) UnmarshalJSONFrom(in *jsontext.Decoder) error {
 	var s string
-	err := json.UnmarshalDecode(in, &s, opts)
+	err := json.UnmarshalDecode(in, &s)
 	if err == nil {
 		if ix := slices.Index(mountPolicyNames, s); ix >= 0 {
 			*mp = MountPolicy(ix)
