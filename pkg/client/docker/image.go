@@ -50,7 +50,7 @@ func PullImage(ctx context.Context, image string) error {
 	if err != nil {
 		return err
 	}
-	_, _, err = cli.ImageInspectWithRaw(ctx, image)
+	_, err = cli.ImageInspect(ctx, image)
 	if err == nil {
 		// Image exists in the local cache, so don't bother pulling it.
 		return nil
