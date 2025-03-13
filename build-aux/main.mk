@@ -313,7 +313,7 @@ prepare-release: generate
 	  go mod edit -require=github.com/telepresenceio/telepresence/rpc/v2@$(TELEPRESENCE_VERSION) && \
 	  git add go.mod)
 
-	git commit --signoff --message='Prepare $(TELEPRESENCE_VERSION)'
+	git commit --signoff --message='Prepare $(TELEPRESENCE_VERSION)' || true
 
 	git tag --annotate --message='$(TELEPRESENCE_VERSION)' $(TELEPRESENCE_VERSION)
 	git tag --annotate --message='$(TELEPRESENCE_VERSION)' rpc/$(TELEPRESENCE_VERSION)
