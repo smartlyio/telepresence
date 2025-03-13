@@ -199,6 +199,9 @@ var excludePrefixes = []string{
 	"lb._dns-sd.",
 	"db._dns-sd.",
 	"b._dns-sd.",
+	"win11-vb.",
+	"dc.msdcs.",
+	"_ldap._tcp.dc._msdcs.",
 }
 
 var (
