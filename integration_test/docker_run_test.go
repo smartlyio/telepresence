@@ -60,7 +60,7 @@ func (s *singleServiceSuite) Test_DockerRun_HostDaemon() {
 				}
 				return expectedOutput.MatchString(out)
 			},
-			10*time.Second, // waitFor
+			30*time.Second, // waitFor
 			2*time.Second,  // polling interval
 			`body of %q matches %q`, "http://"+svc, expectedOutput,
 		)

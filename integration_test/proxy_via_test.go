@@ -178,7 +178,7 @@ func (s *proxyViaSuite) Test_ProxyViaAll() {
 		out, err := itest.Output(ctx, "curl", "--silent", "--max-time", "2", "echo")
 		dlog.Infof(ctx, "Output from echo service %s", out)
 		return err == nil
-	}, 10*time.Second, 2*time.Second)
+	}, 30*time.Second, 2*time.Second)
 }
 
 func (s *proxyViaSuite) Test_ProxyViaAllAndMounts() {

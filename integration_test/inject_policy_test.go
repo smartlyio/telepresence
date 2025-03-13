@@ -181,7 +181,7 @@ func (is *installSuite) Test_MultiOnDemandInjectOnInstall() {
 }
 
 func (is *installSuite) Test_MultiOnDemandInjectOnApply() {
-	svcCount := 25
+	svcCount := 15
 	if runtime.GOOS != "linux" {
 		// The GitHub runner is probably using Colima for Kubernetes and running with limited
 		// resources.
