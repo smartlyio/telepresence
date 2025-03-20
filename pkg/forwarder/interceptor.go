@@ -26,6 +26,10 @@ type Interceptor interface {
 	SetIntercepting(*manager.InterceptInfo)
 	SetStreamProvider(tunnel.ClientStreamProvider)
 	Target() (string, uint16)
+	AddWiretap(*manager.InterceptInfo)
+	WiretapIDs() []string
+	HasWiretap(id string) bool
+	RemoveWiretap(id string)
 }
 
 type interceptor struct {
@@ -41,6 +45,7 @@ type interceptor struct {
 	targetHost     string
 	targetPort     uint16
 	streamProvider tunnel.ClientStreamProvider
+	wiretaps       map[string]*manager.InterceptInfo
 
 	intercept *manager.InterceptInfo
 }
@@ -92,6 +97,38 @@ func (f *interceptor) InterceptId() (id string) {
 	}
 	f.mu.Unlock()
 	return id
+}
+
+func (f *interceptor) AddWiretap(intercept *manager.InterceptInfo) {
+	f.mu.Lock()
+	if f.wiretaps == nil {
+		f.wiretaps = make(map[string]*manager.InterceptInfo)
+	}
+	f.wiretaps[intercept.Id] = intercept
+	f.mu.Unlock()
+}
+
+func (f *interceptor) HasWiretap(id string) bool {
+	f.mu.Lock()
+	_, ok := f.wiretaps[id]
+	f.mu.Unlock()
+	return ok
+}
+
+func (f *interceptor) WiretapIDs() []string {
+	f.mu.Lock()
+	ids := make([]string, 0, len(f.wiretaps))
+	for id := range f.wiretaps {
+		ids = append(ids, id)
+	}
+	f.mu.Unlock()
+	return ids
+}
+
+func (f *interceptor) RemoveWiretap(id string) {
+	f.mu.Lock()
+	delete(f.wiretaps, id)
+	f.mu.Unlock()
 }
 
 func (f *interceptor) SetIntercepting(intercept *manager.InterceptInfo) {

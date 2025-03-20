@@ -281,8 +281,9 @@ message ListRequest {
     INTERCEPTS = 1;
     REPLACEMENTS = 2;
     INGESTS = 4;
-    INSTALLED_AGENTS = 8;
-    EVERYTHING = 15;
+    WIRETAPS = 8;
+    INSTALLED_AGENTS = 16;
+    EVERYTHING = 31;
   }
   Filter filter = 1;
 
