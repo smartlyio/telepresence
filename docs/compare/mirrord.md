@@ -51,9 +51,9 @@ This comparison chart applies to the Open Source editions of both products.
 | Doesn't require injection of a sidecar                                     | ✅ [^3]       | ✅       |
 | Supports connecting to clusters over a corporate VPN                       | ✅            | ✅       |
 | Can intercept traffic                                                      | ✅            | ✅       |
+| Can mirror traffic                                                         | ✅            | ✅       |
 | Can ingest a container                                                     | ✅            | ❌       |
 | Can replace a container                                                    | ✅            | ❌       |
-| Can mirror traffic                                                         | ❌            | ✅       |
 | Can act as a cluster VPN only                                              | ✅            | ❌       |
 | Will work with statically linked binaries                                  | ✅            | ❌       |
 | Runs natively on windows                                                   | ✅            | ❌       |

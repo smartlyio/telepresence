@@ -23,7 +23,7 @@ Kubernetes has various
 Currently, Telepresence supports installing a
 Traffic Agent container on `Deployments`, `ReplicaSets`, `StatefulSets`, and `ArgoRollouts`. A Traffic Agent is
 installed the first time a user makes a `telepresence replace WORKLOAD`, `telepresence ingest WORKLOAD`,
-`telepresence intercept WORKLOAD`, or a `telepresence connect --proxy-via CIDR=WORKLAOD`.
+`telepresence intercept WORKLOAD`, `telepresence wiretap WORKLOAD`, or a `telepresence connect --proxy-via CIDR=WORKLAOD`.
 
 A Traffic Agent may also be installed up front by adding a `telepresence.io/inject-traffic-agent: enabled`
 annotation to the WORKLOADS pod template.

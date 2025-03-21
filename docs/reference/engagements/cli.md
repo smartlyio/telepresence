@@ -10,7 +10,7 @@ The namespace of the engaged workload is specified during connect using the `--n
 
 ```shell
 telepresence connect --namespace myns
-telepresence replace/ingest/intercept hello
+telepresence replace/ingest/intercept/wiretap hello
 ```
 
 ## Importing environment variables

@@ -24,6 +24,18 @@
 #
 # For older changes, see CHANGELOG.OLD.md
 items:
+  - version: 2.23.0
+    date: (TBD)
+    notes:
+      - type: feature
+        title: New telepresence wiretap command
+        body: >-
+          The new `telepresence wiretap` command introduces a read-only form of an `intercept` where the original
+          container will run unaffected while a copy of the wiretapped traffic is sent to the client.
+
+          Similar to an `ingest`, a `wiretap` will always enforce read-only status on all volume mounts, and since that
+          makes the `wiretap` completely read-only, there's no limit to how many simultaneous wiretaps that can be
+          served. In fact, a `wiretap` and an `intercept` on the same port can run simultaneously.
   - version: 2.22.1
     date: (TBD)
     notes:

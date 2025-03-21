@@ -37,9 +37,9 @@ ensuring that the desired ports are exposed to the local environment.
 > was in effect when it started, then it will lose its network. In other words, when using `telepresence docker-run`,
 > you must always rerun after a `telepresence quit`/`telepresence connect --docker`.
 
-### The replace/ingest/intercept --docker-run flag
+### The replace/ingest/intercept/wiretap --docker-run flag
 
-If you want your replace, ingest, or intercept to use another Docker container, you can use the `--docker-run` flag. It will establish the engagement,
+If you want your replace, ingest, intercept, or wiretap to use another Docker container, you can use the `--docker-run` flag. It will establish the engagement,
 run your container in the foreground, then automatically end the engagement when the container exits.
 
 After establishing a connection to a cluster using `telepresence connect --docker`, the container started when using `--docker-run` will share
@@ -59,8 +59,12 @@ OR
 ```console
 $ telepresence intercept <workload_name> --port <port> --docker-run -- <docker run flags> <image> <container arguments>
 ```
+OR
+```console
+$ telepresence wiretap <workload_name> --port <port> --docker-run -- <docker run flags> <image> <container arguments>
+```
 
-The `--` separates flags intended for `telepresence replace/ingest/intercept` from flags intended for `docker run`.
+The `--` separates flags intended for `telepresence replace/ingest/intercept/wiretap` from flags intended for `docker run`.
 
 It's recommended that you always use the `--docker-run` in combination with a connection started with the `telepresence connect --docker`,
 because that makes everything less intrusive:
@@ -70,7 +74,7 @@ because that makes everything less intrusive:
 
 The following happens under the hood when both flags are in use:
 
-- The network of for the replace, ingest, or intercept handler will be set to the same as the network used by the daemon. This guarantees that the
+- The network of for the engagement handler will be set to the same as the network used by the daemon. This guarantees that the
   handler can access the Telepresence VIF, and hence have access the cluster.
 - Volume mounts will be automatic and made using the Telemount Docker volume plugin so that all volumes exposed by the targeted
   remote container are mounted on the local handler container.
@@ -78,7 +82,7 @@ The following happens under the hood when both flags are in use:
 
 ### The docker-build flag
 
-The `--docker-build <docker context>` and the repeatable `docker-build-opt key=value` flags enable container's to be build on the fly by the replace/ingest/intercept command.
+The `--docker-build <docker context>` and the repeatable `docker-build-opt key=value` flags enable container's to be build on the fly by the replace/ingest/intercept/wiretap command.
 
 When using `--docker-build`, the image name used in the argument list must be verbatim `IMAGE`. The word acts as a placeholder and will be replaced by the ID of the image that is built.
 
