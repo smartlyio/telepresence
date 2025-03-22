@@ -9,7 +9,7 @@ env:
 
 jobs:
   build_images:
-    if: github.event.label.name == 'ok to test' || github.event.label.name == 'compatibility test'
+    if: ${{ github.event.label.name == 'ok to test' || github.event.label.name == 'compatibility test' }}
     runs-on: ubuntu-latest
     outputs:
       telepresenceVersion: ${{ steps.version.outputs.version }}
@@ -62,7 +62,7 @@ jobs:
         run: docker logout
 
   run_tests:
-    if: github.event.label.name == 'ok to test' || github.event.label.name == 'compatibility test'
+    if: ${{ github.event.label.name == 'ok to test' || github.event.label.name == 'compatibility test' }}
     strategy:
       fail-fast: false
       matrix:
@@ -101,7 +101,7 @@ jobs:
             fi
             make check-integration
       - name: Compatibility with older manager and agent
-        if: github.event.label.name == 'compatibility test'
+        if:  ${{ github.event.label.name == 'compatibility test' }}
         env:
           DEV_MANAGER_VERSION: "2.21.3"
         uses: nick-fields/retry/@v3
@@ -116,7 +116,7 @@ jobs:
             fi
             make check-integration
       - name: Compatibility with older client
-        if: github.event.label.name == 'compatibility test'
+        if:  ${{ github.event.label.name == 'compatibility test' }}
         env:
           DEV_CLIENT_VERSION: "2.21.3"
         uses: nick-fields/retry/@v3
