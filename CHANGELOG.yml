@@ -24,6 +24,15 @@
 #
 # For older changes, see CHANGELOG.OLD.md
 items:
+  - version: 2.22.1
+    date: (TBD)
+    notes:
+      - type: bugfix
+        title: Only restore inactive traffic-agent after a replace.
+        body: |-
+          A regression in the 2.20.0 release would cause the traffic-agent to be replaced with a dormant version that
+          didn't touch any ports when an intercept ended. This terminated other ongoing intercepts on the same pod.
+          This is now changed so that the traffic-agent remains unaffected for this use-case.
   - version: 2.22.0
     date: 2025-03-14
     notes:

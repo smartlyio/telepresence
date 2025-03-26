@@ -513,18 +513,19 @@ func (s *state) restoreAppContainer(ctx context.Context, ii *rpc.InterceptInfo, 
 			return nil, nil
 		}
 		var cn *agentconfig.Container
+		var desiredPolicy agentconfig.ReplacePolicy
 		if spec.NoDefaultPort {
+			desiredPolicy = agentconfig.ReplacePolicyInactive
 			cn, err = findContainer(sce.AgentConfig(), spec)
 		} else {
+			// Let's keep the intercepting agent in place. There might be other intercepts or wiretaps active.
+			desiredPolicy = agentconfig.ReplacePolicyIntercept
 			cn, _, err = findIntercept(sce.AgentConfig(), spec)
 		}
-		if err != nil {
+		if err != nil || cn.Replace == desiredPolicy {
 			return nil, nil
 		}
-		if cn.Replace == agentconfig.ReplacePolicyInactive {
-			return nil, nil
-		}
-		cn.Replace = agentconfig.ReplacePolicyInactive
+		cn.Replace = desiredPolicy
 
 		// The pods for this workload will be killed once the new updated sidecar
 		// reaches the configmap. We inactivate them now, so that they don't continue to

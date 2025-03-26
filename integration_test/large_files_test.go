@@ -199,7 +199,9 @@ func (s *largeFilesSuite) largeFileIntercepts(ctx context.Context) {
 		for n := 1; n < fileCountPerSvc; n++ { // Leave the first entry empty for now
 			go func(i, n int) {
 				defer wg.Done()
-				s.NoError(validateLargeFile(filepath.Join(s.mountPoint[i], "home", "scratch", s.largeFiles[i*fileCountPerSvc+n]), fileSize))
+				s.NoError(itest.TimedRun(ctx, 10*time.Second, func(_ context.Context) error {
+					return validateLargeFile(filepath.Join(s.mountPoint[i], "home", "scratch", s.largeFiles[i*fileCountPerSvc+n]), fileSize)
+				}))
 			}(i, n)
 		}
 	}
@@ -216,7 +218,9 @@ func (s *largeFilesSuite) largeFileIntercepts(ctx context.Context) {
 	for i := 0; i < s.ServiceCount(); i++ {
 		go func(i int) {
 			defer wg.Done()
-			s.NoError(validateLargeFile(filepath.Join(s.mountPoint[i], "home", "scratch", s.largeFiles[i*fileCountPerSvc]), fileSize))
+			s.NoError(itest.TimedRun(ctx, 10*time.Second, func(_ context.Context) error {
+				return validateLargeFile(filepath.Join(s.mountPoint[i], "home", "scratch", s.largeFiles[i*fileCountPerSvc]), fileSize)
+			}))
 		}(i)
 	}
 	wg.Wait()
