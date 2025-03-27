@@ -37,7 +37,7 @@ items:
           makes the `wiretap` completely read-only, there's no limit to how many simultaneous wiretaps that can be
           served. In fact, a `wiretap` and an `intercept` on the same port can run simultaneously.
   - version: 2.22.1
-    date: (TBD)
+    date: 2025-03-27
     notes:
       - type: bugfix
         title: Only restore inactive traffic-agent after a replace.

@@ -86,6 +86,9 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - build-release
+    outputs:
+      draft: ${{ steps.semver_check.outputs.draft }}
+      prerelease: ${{ steps.semver_check.outputs.prerelease }}
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v4
@@ -161,7 +164,7 @@ jobs:
     needs:
       - push-images
       - publish-release
-    if: ${{ needs.publish-release.semver_check.outputs.draft == 'false' }}
+    if: ${{ needs.publish-release.outputs.draft == 'false' }}
     strategy:
       fail-fast: false
       matrix:

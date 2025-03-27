@@ -9,7 +9,7 @@ The new `telepresence wiretap` command introduces a read-only form of an `interc
 Similar to an `ingest`, a `wiretap` will always enforce read-only status on all volume mounts, and since that makes the `wiretap` completely read-only, there's no limit to how many simultaneous wiretaps that can be served. In fact, a `wiretap` and an `intercept` on the same port can run simultaneously.
 </div>
 
-## Version 2.22.1
+## Version 2.22.1 <span style="font-size: 16px;">(March 27)</span>
 ## <div style="display:flex;"><img src="images/bugfix.png" alt="bugfix" style="width:30px;height:fit-content;"/><div style="display:flex;margin-left:7px;">Only restore inactive traffic-agent after a replace.</div></div>
 <div style="margin-left: 15px">
 
