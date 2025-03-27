@@ -82,6 +82,7 @@ func (s *state) CreateRequest(ctx context.Context) (*connector.CreateInterceptRe
 	spec.ContainerName = s.ContainerName
 	spec.Mechanism = s.Mechanism
 	spec.MechanismArgs = s.MechanismArgs
+	spec.Wiretap = s.Wiretap
 	spec.Agent = s.AgentName
 	spec.TargetHost = "127.0.0.1"
 	spec.NoDefaultPort = s.NoDefaultPort
@@ -160,7 +161,7 @@ func (s *state) Run(ctx context.Context) (*Info, error) {
 		if err != nil {
 			return nil, err
 		}
-		s.handlerContainer, s.Cmdline, err = s.DockerFlags.GetContainerNameAndArgs(fmt.Sprintf("intercept-%s-%d", s.Name(), s.localPort))
+		s.handlerContainer, s.Cmdline, err = s.DockerFlags.GetContainerNameAndArgs(fmt.Sprintf("%s-%s-%d", s.what(), s.Name(), s.localPort))
 		if err != nil {
 			return nil, err
 		}
@@ -172,6 +173,16 @@ func (s *state) Run(ctx context.Context) (*Info, error) {
 	return s.info, nil
 }
 
+func (s *state) what() string {
+	what := "intercept"
+	if s.Wiretap {
+		what = "wiretap"
+	} else if s.NoDefaultPort {
+		what = "replace"
+	}
+	return what
+}
+
 func (s *state) create(ctx context.Context) (acquired bool, err error) {
 	ud := daemon.GetUserClient(ctx)
 	s.status, err = ud.Status(ctx, &empty.Empty{})
@@ -179,23 +190,25 @@ func (s *state) create(ctx context.Context) (acquired bool, err error) {
 		return false, err
 	}
 
+	what := s.what()
+
 	// Add whatever metadata we already have to scout
 	scout.SetMetadatum(ctx, "service_name", s.AgentName)
 	scout.SetMetadatum(ctx, "manager_install_id", s.status.ManagerInstallId)
-	scout.SetMetadatum(ctx, "intercept_mechanism", s.Mechanism)
-	scout.SetMetadatum(ctx, "intercept_mechanism_numargs", len(s.MechanismArgs))
+	scout.SetMetadatum(ctx, what+"_mechanism", s.Mechanism)
+	scout.SetMetadatum(ctx, what+"_mechanism_numargs", len(s.MechanismArgs))
 
 	ir, err := s.self.CreateRequest(ctx)
 	if err != nil {
-		scout.Report(ctx, "intercept_validation_fail", scout.Entry{Key: "error", Value: err.Error()})
+		scout.Report(ctx, what+"_validation_fail", scout.Entry{Key: "error", Value: err.Error()})
 		return false, errcat.NoDaemonLogs.New(err)
 	}
 
 	defer func() {
 		if err != nil {
-			scout.Report(ctx, "intercept_fail", scout.Entry{Key: "error", Value: err.Error()})
+			scout.Report(ctx, what+"_fail", scout.Entry{Key: "error", Value: err.Error()})
 		} else {
-			scout.Report(ctx, "intercept_success")
+			scout.Report(ctx, what+"_success")
 		}
 	}()
 
@@ -216,6 +229,7 @@ func (s *state) create(ctx context.Context) (acquired bool, err error) {
 	// Add metadata to scout from InterceptResult
 	scout.SetMetadatum(ctx, "service_uid", r.GetServiceUid())
 	scout.SetMetadatum(ctx, "workload_kind", r.GetWorkloadKind())
+
 	// Since a user can create an intercept without specifying a namespace
 	// (thus using the default in their kubeconfig), we should be getting
 	// the namespace from the InterceptResult because that adds the namespace
@@ -269,7 +283,7 @@ func (s *state) leave(ctx context.Context) error {
 		}()
 	}
 	n := strings.TrimSpace(s.Name())
-	dlog.Debugf(ctx, "Leaving intercept %s", n)
+	dlog.Debugf(ctx, "Leaving %s %s", s.what(), n)
 	r, err := daemon.GetUserClient(ctx).RemoveIntercept(ctx, &manager.RemoveInterceptRequest2{Name: n})
 	if err != nil && grpcStatus.Code(err) == grpcCodes.Canceled {
 		// Deactivation was caused by a disconnect

@@ -6,8 +6,8 @@ title: Target a specific container
 A `telepresence replace` or `telepresence ingest` will always target a specific container, and the `--container` flag is
 mandatory when the workload has more than one container.
 
-A `telepresence intercept` will ultimately target a specific port within a container. The port is usually determined
-by examining the relationship between the service's `targetPort` and the container's `containerPort`.
+A `telepresence intercept` or `telepresence wiretap` will ultimately target a specific port within a container. The port
+is usually determined by examining the relationship between the service's `targetPort` and the container's `containerPort`.
 
 In certain scenarios, the container owning the intercepted port differs from the container the intercept
 targets. This container's sole purpose is to route traffic from the service to the intended container,

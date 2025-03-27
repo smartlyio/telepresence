@@ -89,13 +89,51 @@ func (f *tcp) listen(ctx context.Context) (*net.TCPListener, error) {
 	return net.ListenTCP("tcp", &net.TCPAddr{Port: int(listenPort)})
 }
 
-func (f *tcp) forwardConn(clientConn *net.TCPConn) error {
+// Number of []byte chunks that can be cached by a wiretap connection before it discards data.
+const wiretapCacheSize = 0x100
+
+func (f *tcp) forwardConn(clientConn net.Conn) error {
+	var wtIntercepts []*manager.InterceptInfo
 	f.mu.Lock()
 	ctx := f.tCtx
 	targetHost := f.targetHost
 	targetPort := f.targetPort
 	intercept := f.intercept
+	tapCount := len(f.wiretaps)
+	if tapCount > 0 {
+		wtIntercepts = make([]*manager.InterceptInfo, tapCount)
+		i := 0
+		for _, wt := range f.wiretaps {
+			wtIntercepts[i] = wt
+			i++
+		}
+	}
 	f.mu.Unlock()
+
+	ctx = dlog.WithField(ctx, "client", clientConn.RemoteAddr().String())
+
+	var targetAddr *net.TCPAddr
+	if targetPort > 0 {
+		var err error
+		hp := iputil.JoinHostPort(targetHost, targetPort)
+		targetAddr, err = net.ResolveTCPAddr("tcp", hp)
+		if err != nil {
+			return fmt.Errorf("error on resolve(%s): %w", hp, err)
+		}
+
+		if len(wtIntercepts) > 0 && targetPort > 0 {
+			var taps []net.Conn
+			clientConn, taps = AddWiretaps(ctx, clientConn, tapCount, wiretapCacheSize)
+			for i, ii := range wtIntercepts {
+				go func(conn net.Conn, intercept *manager.InterceptInfo) {
+					err := f.interceptConn(ctx, conn, intercept)
+					if err != nil {
+						dlog.Errorf(ctx, "wiretap ended with error: %v", err)
+					}
+				}(taps[i], ii)
+			}
+		}
+	}
 	if intercept != nil {
 		return f.interceptConn(ctx, clientConn, intercept)
 	}
@@ -109,11 +147,6 @@ func (f *tcp) forwardConn(clientConn *net.TCPConn) error {
 		return nil
 	}
 
-	targetAddr, err := net.ResolveTCPAddr("tcp", iputil.JoinHostPort(targetHost, targetPort))
-	if err != nil {
-		return fmt.Errorf("error on resolve(%s): %w", iputil.JoinHostPort(targetHost, targetPort), err)
-	}
-	ctx = dlog.WithField(ctx, "client", clientConn.RemoteAddr().String())
 	ctx = dlog.WithField(ctx, "target", targetAddr.String())
 
 	dlog.Debug(ctx, "Forwarding...")
@@ -137,7 +170,9 @@ func (f *tcp) forwardConn(clientConn *net.TCPConn) error {
 		if _, err := io.Copy(clientConn, targetConn); err != nil {
 			dlog.Debugf(ctx, "Error targetConn->clientConn: %+v", err)
 		}
-		_ = clientConn.CloseWrite()
+		if hwCloser, ok := clientConn.(interface{ CloseWrite() error }); ok {
+			_ = hwCloser.CloseWrite()
+		}
 		done <- struct{}{}
 	}()
 

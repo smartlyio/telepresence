@@ -12,12 +12,22 @@ import (
 func DescribeIntercepts(ctx context.Context, iis []*manager.InterceptInfo, igs []*rpc.IngestInfo, volumeMountsPrevented error, debug bool) string {
 	sb := strings.Builder{}
 	if len(iis) > 0 {
-		var nis, ris []*manager.InterceptInfo
+		var nis, ris, wts []*manager.InterceptInfo
 		for _, ii := range iis {
-			if ii.Spec.NoDefaultPort {
+			switch {
+			case ii.Spec.NoDefaultPort:
 				ris = append(ris, ii)
-			} else {
+			case ii.Spec.Wiretap:
+				wts = append(wts, ii)
+			default:
 				nis = append(nis, ii)
+			}
+		}
+		if len(ris) > 0 {
+			sb.WriteString("replaced")
+			for _, ii := range ris {
+				sb.WriteByte('\n')
+				describeIntercept(ctx, ii, volumeMountsPrevented, debug, &sb)
 			}
 		}
 		if len(nis) > 0 {
@@ -27,9 +37,9 @@ func DescribeIntercepts(ctx context.Context, iis []*manager.InterceptInfo, igs [
 				describeIntercept(ctx, ii, volumeMountsPrevented, debug, &sb)
 			}
 		}
-		if len(ris) > 0 {
-			sb.WriteString("replaced")
-			for _, ii := range ris {
+		if len(wts) > 0 {
+			sb.WriteString("wiretapped")
+			for _, ii := range wts {
 				sb.WriteByte('\n')
 				describeIntercept(ctx, ii, volumeMountsPrevented, debug, &sb)
 			}

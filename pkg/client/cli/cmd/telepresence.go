@@ -155,6 +155,7 @@ func WithSubCommands(ctx context.Context) context.Context {
 		statusCmd(),
 		uninstall(),
 		version(),
+		wiretapCmd(),
 	)
 }
 

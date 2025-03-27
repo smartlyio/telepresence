@@ -208,10 +208,14 @@ func (s *state) preparePorts(ac *agentconfig.Sidecar, cn *agentconfig.Container,
 		return info.Disposition == rpc.InterceptDispositionType_ACTIVE && info.Spec.Agent == ac.AgentName && info.Spec.Namespace == ac.Namespace
 	})
 
-	if spec.Mechanism != "http" {
+	if !(spec.Wiretap || spec.Mechanism == "http") {
 		// Intercept is global, so it will conflict with any other intercept using the same port and protocol.
 		for _, otherIc := range otherIcs {
 			oSpec := otherIc.Spec // Validate that there's no port conflict
+			if oSpec.Wiretap {
+				// wiretaps will not cause conflicts
+				continue
+			}
 			for cp := range uniqueContainerPorts {
 				if cp.Port == uint16(oSpec.ContainerPort) && string(cp.Proto) == oSpec.Protocol {
 					name := oSpec.Name

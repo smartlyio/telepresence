@@ -24,10 +24,11 @@ const (
 	includeIntercepts = iota
 	includeIngests
 	includeReplacements
+	includeWiretaps
 )
 
 type listCommand struct {
-	inclusions [3]bool
+	inclusions [4]bool
 	onlyAgents bool
 	debug      bool
 	namespace  string
@@ -51,6 +52,7 @@ func list() *cobra.Command {
 	flags.BoolVarP(&s.inclusions[includeIntercepts], "intercepts", "i", false, "intercepts")
 	flags.BoolVarP(&s.inclusions[includeIngests], "ingests", "g", false, "ingests")
 	flags.BoolVarP(&s.inclusions[includeReplacements], "replacements", "r", false, "replacements")
+	flags.BoolVarP(&s.inclusions[includeWiretaps], "wiretaps", "t", false, "wiretaps")
 	flags.BoolVarP(&s.onlyAgents, "agents", "a", false, "with installed agents only")
 	flags.BoolVar(&s.debug, "debug", false, "include debugging information")
 	flags.StringVarP(&s.namespace, "namespace", "n", "", "If present, the namespace scope for this CLI request")
@@ -110,6 +112,8 @@ func (s *listCommand) list(cmd *cobra.Command, _ []string) error {
 				filter |= connector.ListRequest_REPLACEMENTS
 			case includeIngests:
 				filter |= connector.ListRequest_INGESTS
+			case includeWiretaps:
+				filter |= connector.ListRequest_WIRETAPS
 			}
 		}
 	}

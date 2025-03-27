@@ -38,6 +38,24 @@ Telepresence offers three powerful ways to develop your services locally:
   - You want your local service to only receive specific ingress traffic, while other traffic must be untouched.
   - You want your remote container to continue processing other requests or background tasks.
 
+### Wiretap
+* **How it Works:**
+  - Adds a wiretap on a specific service port (or ports) and sends the data to the local workstation.
+  - Makes the remote environment of the targeted container available to the local workstation.
+  - Provides read-only access to the volumes mounted by the targeted container.
+* **Impact:**
+  - A Traffic Agent is injected into the pods of the targeted workload.
+  - All containers keep on running.
+  - All traffic will still reach the remote service.
+  - Wiretapped traffic is rerouted to the local workstation.
+* **Use-cases:**
+  - You need a solution where several developers can engage with the same service simultaneously.
+  - Your main focus is the service API rather than the cluster's pods and containers.
+  - You want your local service to only receive specific ingress traffic.
+  - You don't care about the responses sent by your local service.
+  - You don't want breakpoints in your local service to affect the remote service.
+  - You want to keep the impact that your local development has on the cluster to a minimum.
+
 ### Ingest
 * **How it Works:**
    - Makes the remote environment of the ingested container available to the local workstation.
@@ -46,7 +64,7 @@ Telepresence offers three powerful ways to develop your services locally:
    - A Traffic Agent is injected into the pods of the targeted workload.
    - No traffic is rerouted and all containers keep on running.
 * **Use-cases:**
-   - You want to keep the impact of your local development to a minimum.
+   - You want to keep the impact that your local development has on the cluster to a minimum.
    - You have don't need traffic being routed from the cluster, and read-only access to the container's volumes is ok.
 
 ## Prerequisites
@@ -196,6 +214,41 @@ intercepted traffic to continue to run and deal with tasks that aren't directly 
 
 You can now:
 - Make changes on the fly and see them reflected when interacting with your Kubernetes environment.
+- Query services only exposed in your cluster's network.
+- Set breakpoints in your IDE to investigate bugs.
+
+## Wiretap your application
+
+You can use the `telepresence wiretap` command when you want to wiretap the traffic for a specific service and send a
+copy of it to your workstation. The `wiretap` is less intrusive than the `intercept`, because it does not interfere
+with the traffic at all.
+
+1. Connect to your cluster with `telepresence connect`.
+
+2. Put a wiretap on all traffic going to the application's http port in your cluster and send it to port 8080 on your workstation.
+    ```console
+    $ telepresence wiretap example-app --port 8080:http --env-file ~/example-app-intercept.env --mount /tmp/example-app-mounts
+    Using Deployment example-app
+    wiretapped
+      Wiretap name  : example-app
+      State         : ACTIVE
+      Workload kind : Deployment
+      Destination   : 127.0.0.1:8080
+      Intercepting  : all TCP connections
+    ```
+
+    * For `--port`: specify the port the local instance of your application is running on, and optionally the remote port
+      that you want to wiretap. Telepresence will select the remote port automatically when there's only one service
+      port available to access the workload. You must specify the port to wiretap when the workload exposes multiple
+      ports. You can do this by specifying the port you want to wiretap after a colon in the `--port` argument (like in
+      the example), and/or by specifying the service you want to wiretap using the `--service` flag.
+
+    * For `--env-file`: specify a file path for Telepresence to write the environment variables that are set for the targeted
+      container.
+
+3. Start your local application using the environment variables retrieved and the volumes that were mounted in the previous step.
+
+You can now:
 - Query services only exposed in your cluster's network.
 - Set breakpoints in your IDE to investigate bugs.
 

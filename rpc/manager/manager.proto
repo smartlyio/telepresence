@@ -181,6 +181,9 @@ message InterceptSpec {
   // Whether to replace the running container.
   bool replace = 22;
 
+  // place a wiretap on intercepted ports instead of redirecting them
+  bool wiretap = 26;
+
   // Intercept desire no default port.
   bool no_default_port = 25;
 }

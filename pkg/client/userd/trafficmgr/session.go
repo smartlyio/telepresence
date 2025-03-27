@@ -600,13 +600,24 @@ func (s *session) getInfosForWorkloads(
 		var ok bool
 		filterMatch := rpc.ListRequest_EVERYTHING
 
-		filterMatch &= ^(rpc.ListRequest_REPLACEMENTS | rpc.ListRequest_INTERCEPTS)
-		if wlInfo.InterceptInfos, ok = iMap[name]; ok {
-			for _, ii := range wlInfo.InterceptInfos {
-				if ii.Spec.NoDefaultPort {
+		filterMatch &= ^(rpc.ListRequest_REPLACEMENTS | rpc.ListRequest_INTERCEPTS | rpc.ListRequest_WIRETAPS)
+		iis, ok := iMap[name]
+		if ok {
+			for _, ii := range iis {
+				include := false
+				switch {
+				case ii.Spec.NoDefaultPort:
 					filterMatch |= rpc.ListRequest_REPLACEMENTS
-				} else {
+					include = filter&rpc.ListRequest_REPLACEMENTS != 0
+				case ii.Spec.Wiretap:
+					filterMatch |= rpc.ListRequest_WIRETAPS
+					include = filter&rpc.ListRequest_WIRETAPS != 0
+				default:
 					filterMatch |= rpc.ListRequest_INTERCEPTS
+					include = filter&rpc.ListRequest_INTERCEPTS != 0
+				}
+				if include || filter == 0 {
+					wlInfo.InterceptInfos = append(wlInfo.InterceptInfos, ii)
 				}
 			}
 		}

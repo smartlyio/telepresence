@@ -41,6 +41,7 @@ type Info struct {
 	HttpFilter    []string          `json:"http_filter,omitempty"     yaml:"http_filter,omitempty"`
 	Global        bool              `json:"global,omitempty"          yaml:"global,omitempty"`
 	Replace       bool              `json:"replace,omitempty"         yaml:"replace,omitempty"`
+	Wiretap       bool              `json:"wiretap,omitempty"         yaml:"wiretap,omitempty"`
 	PodIP         string            `json:"pod_ip,omitempty"          yaml:"pod_ip,omitempty"`
 	debug         bool
 }
@@ -76,6 +77,7 @@ func NewInfo(ctx context.Context, ii *manager.InterceptInfo, ro bool, mountError
 		HttpFilter:    spec.MechanismArgs,
 		Global:        spec.Mechanism == "tcp",
 		Replace:       spec.NoDefaultPort, // spec.Replace can't be used because it's set by deprecated --replace flag
+		Wiretap:       spec.Wiretap,
 	}
 	if spec.ServiceUid != "" {
 		// For backward compatibility in JSON output
@@ -87,9 +89,15 @@ func NewInfo(ctx context.Context, ii *manager.InterceptInfo, ro bool, mountError
 func (ii *Info) WriteTo(w io.Writer) (int64, error) {
 	kvf := ioutil.DefaultKeyValueFormatter()
 	kvf.Prefix = "   "
-	if ii.Replace {
+	what := "Intercepting"
+	switch {
+	case ii.Replace:
 		kvf.Add("Container name", ii.ContainerName)
-	} else {
+		what = "Port forwards"
+	case ii.Wiretap:
+		kvf.Add("Wiretap name", ii.Name)
+		what = "Wiretapping"
+	default:
 		kvf.Add("Intercept name", ii.Name)
 	}
 	kvf.Add("State", func() string {
@@ -122,19 +130,12 @@ func (ii *Info) WriteTo(w io.Writer) (int64, error) {
 		to := pm.To()
 		pkv.Add(pm.From().String(), fmt.Sprintf("%d %s", to.Port, to.Proto))
 	}
-	key := "Intercepting"
-	if ii.Replace {
-		key = "Port forwards"
-	}
-	kvf.Add(key, fmt.Sprintf("%s -> %s\n%s", ii.PodIP, ii.TargetHost, pkv))
+	kvf.Add(what, fmt.Sprintf("%s -> %s\n%s", ii.PodIP, ii.TargetHost, pkv))
 
 	if !ii.Global {
-		kvf.Add("Intercepting", func() string {
+		kvf.Add(what, func() string {
 			if ii.FilterDesc != "" {
 				return ii.FilterDesc
-			}
-			if ii.Global {
-				return `using mechanism "tcp"`
 			}
 			return fmt.Sprintf("using mechanism=%q with args=%q", "http", ii.HttpFilter)
 		}())

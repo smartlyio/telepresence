@@ -2,6 +2,7 @@ package intercept
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"slices"
 	"sort"
@@ -38,6 +39,7 @@ type Command struct {
 	Address       string   // --address
 
 	Replace bool // whether --replace was passed
+	Wiretap bool // wiretap subcommand used
 
 	ToPod []string // --to-pod
 
@@ -54,8 +56,14 @@ type Command struct {
 }
 
 func (c *Command) AddInterceptFlags(cmd *cobra.Command) {
+	what := "intercept"
+	how := "intercepted"
+	if c.Wiretap {
+		what = "wiretap"
+		how = "wiretapped"
+	}
 	flagSet := cmd.Flags()
-	flagSet.StringVarP(&c.AgentName, "workload", "w", "", "Name of workload (Deployment, ReplicaSet, StatefulSet, Rollout) to intercept, if different from <name>")
+	flagSet.StringVarP(&c.AgentName, "workload", "w", "", fmt.Sprintf("Name of workload (Deployment, ReplicaSet, StatefulSet, Rollout) to %s, if different from <name>", what))
 	flagSet.StringSliceVarP(&c.Ports, "port", "p", nil, ``+
 		`Local ports to forward to. Use <local port>:<identifier> to uniquely identify service ports, where the <identifier> is the port name or number. `+
 		`With --docker-run and a daemon that doesn't run in docker', use <local port>:<container port> or `+
@@ -67,31 +75,35 @@ func (c *Command) AddInterceptFlags(cmd *cobra.Command) {
 		`e.g. '--address 10.0.0.2'`,
 	)
 
-	flagSet.StringVar(&c.ServiceName, "service", "", "Optional name of service to intercept. Sometimes needed to uniquely identify the intercepted port.")
+	flagSet.StringVar(&c.ServiceName, "service", "", fmt.Sprintf("Optional name of service to %s. Sometimes needed to uniquely identify the intercepted port.", what))
 
 	flagSet.StringVar(&c.ContainerName, "container", "",
-		"Name of container that provides the environment and mounts for the intercept. Defaults to the container matching the first intercepted port.")
+		fmt.Sprintf("Name of container that provides the environment and mounts for the %s. Defaults to the container matching the first %s port.", what, how))
 
-	flagSet.StringSliceVar(&c.ToPod, "to-pod", []string{}, ``+
-		`Additional ports to forward to the intercepted pod, will available for connections to localhost:PORT. `+
-		`Use this to, for example, access proxy/helper sidecars in the intercepted pod. The default protocol is TCP. `+
-		`Use <port>/UDP for UDP ports`)
+	if !c.Wiretap {
+		flagSet.StringSliceVar(&c.ToPod, "to-pod", []string{}, fmt.Sprintf(
+			`Additional ports to forward to the %s pod, will available for connections to localhost:PORT. `+
+				`Use this to, for example, access proxy/helper sidecars in the %s pod. The default protocol is TCP. `+
+				`Use <port>/UDP for UDP ports`, how, how))
+	}
 
 	c.EnvFlags.AddFlags(flagSet)
 	c.MountFlags.AddFlags(flagSet, false)
-	c.DockerFlags.AddFlags(flagSet, "intercepted")
+	c.DockerFlags.AddFlags(flagSet, how)
 
 	flagSet.StringVar(&c.Mechanism, "mechanism", "tcp", "Which extension `mechanism` to use")
 
-	flagSet.StringVar(&c.WaitMessage, "wait-message", "", "Message to print when intercept handler has started")
+	flagSet.StringVar(&c.WaitMessage, "wait-message", "", fmt.Sprintf("Message to print when %s handler has started", what))
 
 	flagSet.BoolVar(&c.DetailedOutput, "detailed-output", false,
-		`Provide very detailed info about the intercept when used together with --output=json or --output=yaml'`)
+		fmt.Sprintf(`Provide very detailed info about the %s when used together with --output=json or --output=yaml'`, what))
 
-	flagSet.BoolVarP(&c.Replace, "replace", "", false,
-		`Indicates if the traffic-agent should replace application containers in workload pods. `+
-			`The default behavior is for the agent sidecar to be installed alongside existing containers.`)
-	flagSet.Lookup("replace").Deprecated = "Use the replace command."
+	if !c.Wiretap {
+		flagSet.BoolVarP(&c.Replace, "replace", "", false,
+			`Indicates if the traffic-agent should replace application containers in workload pods. `+
+				`The default behavior is for the agent sidecar to be installed alongside existing containers.`)
+		flagSet.Lookup("replace").Deprecated = "Use the replace command."
+	}
 
 	_ = cmd.RegisterFlagCompletionFunc("container", ingest.AutocompleteContainer)
 	_ = cmd.RegisterFlagCompletionFunc("service", autocompleteService)
@@ -151,6 +163,9 @@ func (c *Command) Validate(cmd *cobra.Command, positional []string) error {
 	}
 	if c.DockerFlags.Mount != "" && !c.MountFlags.Enabled {
 		return errors.New("--docker-mount cannot be used with --mount=false")
+	}
+	if c.Wiretap {
+		c.MountFlags.ReadOnly = true
 	}
 	return c.DockerFlags.Validate(c.Cmdline)
 }

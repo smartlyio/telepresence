@@ -36,11 +36,13 @@ in the telepresence client binary (`telepresence helm install`) or by using a He
 
 ## Traffic Agent
 
-The Traffic Agent is a sidecar container that facilitates engagements. When a `replace`, `ingest` or `intercept` is first
+The Traffic Agent is a sidecar container that facilitates engagements. When a `replace`, `ingest`, `intercept`, or `wiretap` is first
 started, the Traffic Agent container is injected into the workload's pod(s). You can see the Traffic Agent's status by
 running `telepresence list` or `kubectl describe pod <pod-name>`.
 
 Depending on if an `replace` or `intercept` is active or not, the Traffic Agent will either route the incoming request 
 to your workstation, or it will pass it along to the container in the pod usually handling requests.
+
+When a `wiretap` is active, the Traffic Agent will send a copy of the incoming requests to your workstation.
 
 Please see [Traffic Agent Sidecar](engagements/sidecar.md) for details.

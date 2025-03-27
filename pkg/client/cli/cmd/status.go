@@ -68,6 +68,8 @@ type UserDaemonStatus struct {
 	MappedNamespaces  []string                 `json:"mapped_namespaces,omitempty"`
 	Ingests           []ConnectStatusIngest    `json:"ingests,omitempty"`
 	Intercepts        []ConnectStatusIntercept `json:"intercepts,omitempty"`
+	Replacements      []ConnectStatusIntercept `json:"replacements,omitempty"`
+	Wiretaps          []ConnectStatusIntercept `json:"wiretaps,omitempty"`
 	versionName       string
 }
 
@@ -298,10 +300,18 @@ func getStatusInfo(ctx context.Context, di *daemon.Info) (*StatusInfo, error) {
 			})
 		}
 		for _, icept := range status.GetIntercepts().GetIntercepts() {
-			us.Intercepts = append(us.Intercepts, ConnectStatusIntercept{
+			cis := ConnectStatusIntercept{
 				Name:   icept.Spec.Name,
 				Client: icept.Spec.Client,
-			})
+			}
+			switch {
+			case icept.Spec.NoDefaultPort:
+				us.Replacements = append(us.Replacements, cis)
+			case icept.Spec.Wiretap:
+				us.Wiretaps = append(us.Wiretaps, cis)
+			default:
+				us.Intercepts = append(us.Intercepts, cis)
+			}
 		}
 		us.Namespace = status.Namespace
 		us.ManagerNamespace = status.ManagerNamespace
@@ -563,17 +573,22 @@ func (cs *UserDaemonStatus) print(kvf *ioutil.KeyValueFormatter) {
 		}
 		kvf.Add("Ingests", out.String())
 	}
-	if il := len(cs.Intercepts); il > 0 {
-		out := &strings.Builder{}
-		ioutil.Printf(out, "%d total\n", il)
-		subKvf := ioutil.DefaultKeyValueFormatter()
-		subKvf.Indent = "  "
-		for _, intercept := range cs.Intercepts {
-			subKvf.Add(intercept.Name, intercept.Client)
+	addInterceptGroup := func(name string, intercepts []ConnectStatusIntercept) {
+		if il := len(intercepts); il > 0 {
+			out := &strings.Builder{}
+			ioutil.Printf(out, "%d total\n", il)
+			subKvf := ioutil.DefaultKeyValueFormatter()
+			subKvf.Indent = "  "
+			for _, intercept := range intercepts {
+				subKvf.Add(intercept.Name, intercept.Client)
+			}
+			subKvf.Println(out)
+			kvf.Add(name, out.String())
 		}
-		subKvf.Println(out)
-		kvf.Add("Intercepts", out.String())
 	}
+	addInterceptGroup("Replacements", cs.Replacements)
+	addInterceptGroup("Intercepts", cs.Intercepts)
+	addInterceptGroup("Wiretaps", cs.Wiretaps)
 }
 
 func (ts *TrafficManagerStatus) MarshalJSON() ([]byte, error) {
