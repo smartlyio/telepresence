@@ -21,15 +21,24 @@ func ConnIDFromUDP(src, dst *net.UDPAddr) ConnID {
 func NewConnID(proto int, src, dst netip.AddrPort) ConnID {
 	srcAddr := src.Addr()
 	dstAddr := dst.Addr()
-	if srcAddr.Is4In6() {
+	switch {
+	case srcAddr.Is4():
+		if dstAddr.Is4In6() {
+			dstAddr = dstAddr.Unmap()
+		} else if dstAddr.Is6() {
+			srcAddr = netip.AddrFrom16(srcAddr.As16())
+		}
+	case srcAddr.Is4In6():
 		if dstAddr.Is4() {
 			srcAddr = srcAddr.Unmap()
 		} else if dstAddr.Is4In6() {
 			srcAddr = srcAddr.Unmap()
 			dstAddr = dstAddr.Unmap()
 		}
-	} else if srcAddr.Is4() && dstAddr.Is4In6() {
-		dstAddr = dstAddr.Unmap()
+	default:
+		if dstAddr.Is4() {
+			dstAddr = netip.AddrFrom16(dstAddr.As16())
+		}
 	}
 
 	ls := srcAddr.BitLen() / 8
@@ -63,12 +72,12 @@ func (id ConnID) areBothIPv4() bool {
 
 // IsSourceIPv4 returns true if the source of this ConnID is IPv4.
 func (id ConnID) IsSourceIPv4() bool {
-	return id.areBothIPv4() || net.IP(id[0:16]).To4() != nil
+	return id.areBothIPv4() || len(id) > 16 && net.IP(id[0:16]).To4() != nil
 }
 
 // IsDestinationIPv4 returns true if the destination of this ConnID is IPv4.
 func (id ConnID) IsDestinationIPv4() bool {
-	return id.areBothIPv4() || net.IP(id[18:34]).To4() != nil
+	return id.areBothIPv4() || len(id) == 37 && net.IP(id[18:34]).To4() != nil
 }
 
 // Source returns the source address and port.
