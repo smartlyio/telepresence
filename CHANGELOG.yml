@@ -24,6 +24,16 @@
 #
 # For older changes, see CHANGELOG.OLD.md
 items:
+  - version: 2.22.2
+    date: (TBD)
+    notes:
+      - type: bugfix
+        title: Panic when using telepresence replace in a IPv6-only cluster
+        body: |-
+          A "slice bounds out of range" would occur when the targeted Pod's Traffic Agent requested a local dialer to
+          be created on the client. This was due to a glitch in the VPN-tunnel implementation that got triggered when
+          a remote IPv6-address was combined with a local IPv4-address.
+        docs: https://github.com/telepresenceio/telepresence/issues/3828
   - version: 2.22.1
     date: 2025-03-27
     notes:
