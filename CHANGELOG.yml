@@ -25,7 +25,7 @@
 # For older changes, see CHANGELOG.OLD.md
 items:
   - version: 2.22.2
-    date: (TBD)
+    date: 2025-03-28
     notes:
       - type: bugfix
         title: Panic when using telepresence replace in a IPv6-only cluster
