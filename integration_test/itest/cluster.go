@@ -306,7 +306,10 @@ func (s *cluster) Initialize(ctx context.Context) context.Context {
 	s.ensureQuit(ctx)
 	s.ensureNoManager(ctx)
 	_ = Run(ctx, "kubectl", "delete", "-f", filepath.Join("testdata", "k8s", "client_rbac.yaml"))
-	_ = Run(ctx, "kubectl", "delete", "all", "-l", AssignPurposeLabel)
+	err = Run(ctx, "kubectl", "delete", "ns,svc,deploy,clusterrole,clusterrolebinding,mutatingwebhookconfiguration,pvc,pv", "-l", AssignPurposeLabel)
+	if err != nil {
+		dlog.Errorf(ctx, "kubectl delete: %v", err)
+	}
 	return ctx
 }
 
@@ -801,6 +804,7 @@ func TelepresenceCmd(ctx context.Context, args ...string) *dexec.Cmd {
 	ctx = WithEnv(ctx, map[string]string{
 		"DEV_TELEPRESENCE_CONFIG_DIR": filelocation.AppUserConfigDir(ctx),
 		"DEV_TELEPRESENCE_LOG_DIR":    filelocation.AppUserLogDir(ctx),
+		"TELEPRESENCE_PROGRESS":       "plain",
 	})
 
 	gh := GetGlobalHarness(ctx)
@@ -846,8 +850,7 @@ func TelepresenceQuitOk(ctx context.Context) {
 // AssertQuitOutput asserts that the stdout contains the correct output from a telepresence quit command.
 func AssertQuitOutput(ctx context.Context, stdout string) {
 	t := getT(ctx)
-	assert.True(t, strings.Contains(stdout, "Telepresence Daemons quitting...done") ||
-		strings.Contains(stdout, "Telepresence Daemons have already quit"))
+	assert.True(t, stdout == "" || strings.Contains(stdout, "Quit"))
 	if t.Failed() {
 		t.Logf("Quit output was %q", stdout)
 	}

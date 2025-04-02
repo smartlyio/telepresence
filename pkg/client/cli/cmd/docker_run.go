@@ -63,13 +63,11 @@ func parseFlags(cmd *cobra.Command, args []string) (*cliDocker.RunFlags, []strin
 	// the docker run flags.
 	opts := cmd.Flags()
 	var err error
-	args, err = findAndParseFlag(opts, global.FlagUse, args)
-	if err != nil {
-		return nil, nil, err
-	}
-	args, err = findAndParseFlag(opts, global.FlagOutput, args)
-	if err != nil {
-		return nil, nil, err
+	for _, n := range global.FlagNames {
+		args, err = findAndParseFlag(opts, n, args)
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 	runFlags, args, err := cliDocker.ParseRunFlags(args)
 	if err != nil {
@@ -152,7 +150,11 @@ func runDockerRun(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(opts.Networks) > 0 {
-		connectCancel, err := cliDocker.ConnectNetworksToDaemon(ctx, opts.Networks, daemonName)
+		ns := make([]cliDocker.Network, len(opts.Networks))
+		for i, n := range opts.Networks {
+			ns[i] = cliDocker.Network{Name: n}
+		}
+		connectCancel, err := cliDocker.ConnectNetworksToDaemon(ctx, daemonName, ns)
 		defer connectCancel()
 		if err != nil {
 			return err

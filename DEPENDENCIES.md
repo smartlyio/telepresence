@@ -104,6 +104,7 @@ following Free and Open Source software:
     github.com/modern-go/concurrent                                v0.0.0-20180306012644-bacd9c7ef1dd    Apache License 2.0
     github.com/modern-go/reflect2                                  v1.0.2                                Apache License 2.0
     github.com/monochromegane/go-gitignore                         v0.0.0-20200626010858-205db1a8cc00    MIT license
+    github.com/morikuni/aec                                        v1.0.0                                MIT license
     github.com/munnerz/goautoneg                                   v0.0.0-20191010083416-a7dc8b61c822    3-clause BSD license
     github.com/mxk/go-flowrate                                     v0.0.0-20140419014527-cca7078d478f    3-clause BSD license
     github.com/opencontainers/go-digest                            v1.0.0                                Apache License 2.0

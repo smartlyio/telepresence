@@ -182,13 +182,21 @@ func (s *multiConnectSuite) doubleConnectCheck(ctx1, ctx2 context.Context, n1, n
 	wg := sync.WaitGroup{}
 	runDockerRun := func(ctx context.Context, use, svc string) {
 		defer wg.Done()
-		_, _, _ = itest.Telepresence(ctx, "intercept", "--use", use, "--mount", "false", svc, "--docker-run", "--port", "8080", "--", "--rm", "--name", use, s.handlerTag)
+		_, _, _ = itest.Telepresence(ctx, "intercept", "--use", use, "--mount", "false", svc, "--docker-run", "--port", "8080", "--", "--rm", "--name", use+"-app", s.handlerTag)
 	}
 
 	assertInterceptResponse := func(ctx context.Context, cn, svc string) {
 		s.Eventually(func() bool {
 			stdout, _, err := itest.Telepresence(ctx, "list", "--use", cn, "--intercepts")
-			return err == nil && strings.Contains(stdout, svc+": intercepted")
+			if err == nil {
+				if strings.Contains(stdout, svc+": intercepted") {
+					return true
+				}
+				dlog.Infof(ctx, "stdout: %s", stdout)
+			} else {
+				dlog.Error(ctx, err)
+			}
+			return false
 		}, 30*time.Second, 3*time.Second)
 
 		// Response contains env variables TELEPRESENCE_CONTAINER and TELEPRESENCE_INTERCEPT_ID

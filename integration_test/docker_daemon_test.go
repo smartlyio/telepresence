@@ -72,7 +72,7 @@ func (s *dockerDaemonSuite) Test_DockerDaemon_hostDaemonNoConflict() {
 
 func (s *dockerDaemonSuite) Test_DockerDaemon_alsoProxy32() {
 	ctx := s.Context()
-	s.TelepresenceConnect(ctx, "--docker", "--also-proxy", "169.254.169.254/32", "--name", "a")
+	s.TelepresenceConnect(ctx, "--docker", "--also-proxy", "169.254.169.254/32", "--name", "ax")
 	itest.TelepresenceOk(ctx, "loglevel", "trace")
 	defer itest.TelepresenceOk(ctx, "loglevel", "debug")
 

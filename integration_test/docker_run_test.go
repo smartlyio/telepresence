@@ -283,7 +283,7 @@ func (s *dockerDaemonSuite) Test_DockerRun_VolumePresent() {
 	s.TelepresenceConnect(ctx, "--docker")
 	defer itest.TelepresenceQuitOk(ctx)
 
-	stdout, stderr, err := itest.Telepresence(ctx, "intercept", "--docker-run", "hello", "-p", "8080:http", "--",
+	stdout, stderr, err := itest.Telepresence(ctx, "--progress", "quiet", "intercept", "--docker-run", "hello", "-p", "8080:http", "--",
 		"--rm", "busybox", "ls", "/var/run/secrets/datawire.io/auth")
 	s.NoError(err)
 	s.Empty(stderr)

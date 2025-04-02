@@ -9,6 +9,13 @@ The new `telepresence wiretap` command introduces a read-only form of an `interc
 Similar to an `ingest`, a `wiretap` will always enforce read-only status on all volume mounts, and since that makes the `wiretap` completely read-only, there's no limit to how many simultaneous wiretaps that can be served. In fact, a `wiretap` and an `intercept` on the same port can run simultaneously.
 </div>
 
+## <div style="display:flex;"><img src="images/feature.png" alt="feature" style="width:30px;height:fit-content;"/><div style="display:flex;margin-left:7px;">Human friendly progress reporting</div></div>
+<div style="margin-left: 15px">
+
+Telepresence now uses a progress reporter that is very similar to the one used by Docker compose. The implementation is a variation of that reporter's source code, so big thanks to the Docker compose CLI authors for making it available as OSS.
+A new global `--progress <progress>` flag was added. It defaults to "auto" which means that the style is chosen depending on whether the command runs from a tty type terminal. Other possible values are "plain", "quiet", and "json". `--progress quiet` is implied when formatted output is chosen using `--output json|yaml`.
+</div>
+
 ## Version 2.22.3 <span style="font-size: 16px;">(April  8)</span>
 ## <div style="display:flex;"><img src="images/change.png" alt="change" style="width:30px;height:fit-content;"/><div style="display:flex;margin-left:7px;">The Windows install script will now install Telepresence to "%ProgramFiles%\telepresence"</div></div>
 <div style="margin-left: 15px">
