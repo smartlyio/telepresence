@@ -118,6 +118,19 @@ func (s *dockerDaemonSuite) Test_DockerDaemon_daemonHostNotConflict() {
 	s.TelepresenceConnect(ctx)
 }
 
+func (s *dockerDaemonSuite) Test_DockerDaemon_singleNameLookup() {
+	ctx := s.Context()
+	const svc = "echo-easy"
+	s.ApplyApp(ctx, svc, "deploy/"+svc)
+	defer s.DeleteSvcAndWorkload(ctx, "deploy", svc)
+	out := s.TelepresenceConnect(ctx, "--docker", "--", itest.GetExecutable(ctx), "curl", "--silent", "--max-time", "1", svc)
+	s.Contains(out, "Request served by "+svc)
+	so, err := itest.TelepresenceStatus(ctx)
+	s.NoError(err)
+	s.Nil(so.ContainerizedDaemon)
+	s.False(so.UserDaemon.Running)
+}
+
 func (s *dockerDaemonSuite) Test_DockerDaemon_cacheFiles() {
 	ctx := s.Context()
 	rq := s.Require()
