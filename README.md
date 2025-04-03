@@ -30,36 +30,36 @@ A few quick ways to start using Telepresence:
 
 ## Walkthrough
 
-### Install an interceptable service:
+### Install something in the cluster that Telepresence can engage with:
 Start with an empty cluster:
 
 ```console
-$ kubectl create deploy hello --image=registry.k8s.io/echoserver:1.4
+$ kubectl create deploy hello --image=k8s.gcr.io/echoserver:1.9
 deployment.apps/hello created
 $ kubectl expose deploy hello --port 80 --target-port 8080
 service/hello exposed
 $ kubectl get ns,svc,deploy,po
 NAME                        STATUS   AGE
-namespace/kube-system       Active   53m
-namespace/default           Active   53m
-namespace/kube-public       Active   53m
-namespace/kube-node-lease   Active   53m
+namespace/default           Active   4d19h
+namespace/kube-node-lease   Active   4d19h
+namespace/kube-public       Active   4d19h
+namespace/kube-system       Active   4d19h
 
-NAME                 TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)   AGE
-service/kubernetes   ClusterIP   10.43.0.1      <none>        443/TCP   53m
-service/hello        ClusterIP   10.43.73.112   <none>        80/TCP    2m
+NAME                 TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE
+service/hello        ClusterIP   10.98.148.129   <none>        80/TCP    112s
+service/kubernetes   ClusterIP   10.96.0.1       <none>        443/TCP   4d19h
 
 NAME                    READY   UP-TO-DATE   AVAILABLE   AGE
-deployment.apps/hello   1/1     1            1           2m
+deployment.apps/hello   1/1     1            1           2m47s
 
 NAME                        READY   STATUS    RESTARTS   AGE
-pod/hello-9954f98bf-6p2k9   1/1     Running   0          2m15s
+pod/hello-87f7f548f-djc8v   1/1     Running   0          1m47s
 ```
 
 Check telepresence version
 ```console
 $ telepresence version
-OSS Client : v2.17.0
+OSS Client : v2.23.0
 Root Daemon: not running
 User Daemon: not running
 ```
@@ -78,9 +78,9 @@ Traffic Manager installed successfully
 Let telepresence connect:
 ```console
 $ telepresence connect
-Launching Telepresence Root Daemon
 Launching Telepresence User Daemon
-Connected to context default, namespace default (https://35.232.104.64)
+Launching Telepresence Root Daemon
+Connected to context rancher-desktop, namespace default (https://127.0.0.1:6443)
 ```
 
 A session is now active and outbound connections will be routed to the cluster. I.e. your laptop is logically "inside"
@@ -91,23 +91,31 @@ by their name. You can of course also use namespaced names, e.g. `curl hello.def
 
 ```console
 $ curl hello
-CLIENT VALUES:
-client_address=10.244.0.87
-command=GET
-real path=/
-query=nil
-request_version=1.1
-request_uri=http://hello:8080/
 
-SERVER VALUES:
-server_version=nginx: 1.10.0 - lua: 10001
+Hostname: hello-87f7f548f-djc8v
 
-HEADERS RECEIVED:
-accept=*/*
-host=hello
-user-agent=curl/8.0.1
-BODY:
--no body in request-
+Pod Information:
+	-no pod information available-
+
+Server values:
+	server_version=nginx: 1.13.3 - lua: 10008
+
+Request Information:
+	client_address=10.1.5.190
+	method=GET
+	real path=/
+	query=
+	request_version=1.1
+	request_scheme=http
+	request_uri=http://hello:8080/
+
+Request Headers:
+	accept=*/*
+	host=hello
+	user-agent=curl/8.9.1
+
+Request Body:
+	-no body in request-
 ```
 
 ### Intercept the service. I.e. redirect traffic to it to our laptop (inbound traffic)
@@ -117,24 +125,22 @@ Add an intercept for the hello deployment on port 9000. Here, we also start a se
 ```console
 $ telepresence intercept hello --port 9000 -- python3 -m http.server 9000
 Using Deployment hello
-intercepted
-    Intercept name         : hello
-    State                  : ACTIVE
-    Workload kind          : Deployment
-    Destination            : 127.0.0.1:9000
-    Service Port Identifier: 80
-    Volume Mount Point     : /tmp/telfs-524630891
-    Intercepting           : all TCP connections
+   Intercept name    : hello
+   State             : ACTIVE
+   Workload kind     : Deployment
+   Intercepting      : 10.1.5.196 -> 127.0.0.1
+       8080 -> 9000 TCP
+   Volume Mount Point: /tmp/telfs-629530207
 Serving HTTP on 0.0.0.0 port 9000 (http://0.0.0.0:9000/) ...
 ```
 
 The `python -m httpserver` is now started on port 9000 and will run until terminated by `<ctrl>-C`. Access it from a browser using `http://hello/` or use curl from another terminal. With curl, it presents a html listing from the directory where the server was started. Something like:
 ```console
 $ curl hello
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
-<html>
+<!DOCTYPE HTML>
+<html lang="en">
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta charset="utf-8">
 <title>Directory listing for /</title>
 </head>
 <body>
@@ -151,7 +157,7 @@ $ curl hello
 
 Observe that the python service reports that it's being accessed:
 ```
-127.0.0.1 - - [16/Jun/2022 11:39:20] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [03/Apr/2025 09:44:57] "GET / HTTP/1.1" 200 -
 ```
 
 ### Clean-up and close daemon processes
@@ -186,29 +192,30 @@ an init-container to route traffic through the agent (the init-container is only
 At first glance, we can see that the deployment is installed ...
 ```console
 $ kubectl get svc,deploy,pod
-service/kubernetes   ClusterIP   10.43.0.1       <none>        443/TCP                      7d22h
-service/hello        ClusterIP   10.43.145.57    <none>        80/TCP                       13m
+NAME                 TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)   AGE
+service/hello        ClusterIP   10.102.244.61   <none>        80/TCP    10m
+service/kubernetes   ClusterIP   10.96.0.1       <none>        443/TCP   4d20h
 
 NAME                    READY   UP-TO-DATE   AVAILABLE   AGE
-deployment.apps/hello   1/1     1            1           13m
+deployment.apps/hello   1/1     1            1           11m
 
-NAME                         READY   STATUS    RESTARTS        AGE
-pod/hello-774455b6f5-6x6vs   2/2     Running   0               10m
+NAME                        READY   STATUS    RESTARTS   AGE
+pod/hello-87f7f548f-mdg8d   2/2     Running   0          6m36s
 ```
 
 ... and that the traffic-manager is installed in the "ambassador" namespace.
 
 ```console
 $ kubectl -n ambassador get svc,deploy,pod
-NAME                      TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)    AGE
-service/traffic-manager   ClusterIP   None           <none>        8081/TCP   17m
-service/agent-injector    ClusterIP   10.43.72.154   <none>        443/TCP    17m
+NAME                      TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
+service/agent-injector    ClusterIP   10.107.17.143   <none>        443/TCP    31m
+service/traffic-manager   ClusterIP   None            <none>        8081/TCP   31m
 
 NAME                              READY   UP-TO-DATE   AVAILABLE   AGE
-deployment.apps/traffic-manager   1/1     1            1           17m
+deployment.apps/traffic-manager   1/1     1            1           31m
 
-NAME                                  READY   STATUS    RESTARTS   AGE
-pod/traffic-manager-dcd4cc64f-6v5bp   1/1     Running   0          17m
+NAME                                   READY   STATUS    RESTARTS   AGE
+pod/traffic-manager-7cc6668576-hmlzz   1/1     Running   0          31m
 ```
 
 The traffic-agent is installed too, in the hello pod. Here together with an init-container, because the service is using a numerical
@@ -216,28 +223,30 @@ The traffic-agent is installed too, in the hello pod. Here together with an init
 
 ```console
 $ kubectl describe pod hello-774455b6f5-6x6vs
-Name:             hello-75b7c6d484-9r4xd
+Name:             hello-87f7f548f-mdg8d
 Namespace:        default
 Priority:         0
 Service Account:  default
-Node:             kind-control-plane/192.168.96.2
-Start Time:       Sun, 07 Jan 2024 01:01:33 +0100
+Node:             lima-rancher-desktop/192.168.65.3
+Start Time:       Thu, 03 Apr 2025 09:43:37 +0200
 Labels:           app=hello
-                  pod-template-hash=75b7c6d484
+                  pod-template-hash=87f7f548f
                   telepresence.io/workloadEnabled=true
+                  telepresence.io/workloadKind=Deployment
                   telepresence.io/workloadName=hello
-Annotations:      telepresence.io/inject-traffic-agent: enabled
-                  telepresence.io/restartedAt: 2024-01-07T00:01:33Z
+Annotations:      telepresence.io/agent-config:
+                    {"agentName":"hello","namespace":"default","logLevel":"debug","workloadName":"hello","workloadKind":"Deployment","managerHost":"traffic-ma...
+                  telepresence.io/inject-traffic-agent: enabled
 Status:           Running
-IP:               10.244.0.89
+IP:               10.1.5.196
 IPs:
-  IP:           10.244.0.89
-Controlled By:  ReplicaSet/hello-75b7c6d484
+  IP:           10.1.5.196
+Controlled By:  ReplicaSet/hello-87f7f548f
 Init Containers:
   tel-agent-init:
-    Container ID:  containerd://4acdf45992980e2796f0eb79fb41afb1a57808d108eb14a355cb390ccc764571
-    Image:         docker.io/datawire/tel2:2.17.0
-    Image ID:      docker.io/datawire/tel2@sha256:e18aed6e7bd3c15cb5a99161c164e0303d20156af68ef138faca98dc2c5754a7
+    Container ID:  docker://f3203943fb97414bee8c3ad4b11237895a8165df7aa39a8f88741b4093e491be
+    Image:         local/tel2:2.23.0-alpha.0
+    Image ID:      docker-pullable://tel2@sha256:0f81a553bb223f4cfe97973d585586439451e120eb2ed8e35d0fe9266b22fd6d
     Port:          <none>
     Host Port:     <none>
     Args:
@@ -245,80 +254,74 @@ Init Containers:
     State:          Terminated
       Reason:       Completed
       Exit Code:    0
-      Started:      Sun, 07 Jan 2024 01:01:34 +0100
-      Finished:     Sun, 07 Jan 2024 01:01:34 +0100
+      Started:      Thu, 03 Apr 2025 09:43:38 +0200
+      Finished:     Thu, 03 Apr 2025 09:43:38 +0200
     Ready:          True
     Restart Count:  0
-    Environment:    <none>
+    Environment:
+      LOG_LEVEL:     debug
+      AGENT_CONFIG:   (v1:metadata.annotations['telepresence.io/agent-config'])
+      POD_IP:         (v1:status.podIP)
     Mounts:
-      /etc/traffic-agent from traffic-config (rw)
-      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-svf4h (ro)
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-zgfs5 (ro)
 Containers:
   echoserver:
-    Container ID:   containerd://577e140545f3106c90078e687e0db3661db815062084bb0c9f6b2d0b4f949308
-    Image:          registry.k8s.io/echoserver:1.4
-    Image ID:       sha256:523cad1a4df732d41406c9de49f932cd60d56ffd50619158a2977fd1066028f9
+    Container ID:   docker://2ccc7a81bfe7d1f666af7b17c6415631af2f1bfdb6cb147a0ef7a345f528ac49
+    Image:          registry.k8s.io/echoserver:1.9
+    Image ID:       docker-pullable://registry.k8s.io/echoserver@sha256:10f4dbc8eeeb8806d9b3a261b2473b77ca357b290a15d91ce5a0ca5e6164b535
     Port:           <none>
     Host Port:      <none>
     State:          Running
-      Started:      Sun, 07 Jan 2024 01:01:34 +0100
+      Started:      Thu, 03 Apr 2025 09:43:39 +0200
     Ready:          True
     Restart Count:  0
     Environment:    <none>
     Mounts:
-      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-svf4h (ro)
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-zgfs5 (ro)
   traffic-agent:
-    Container ID:  containerd://17558b4711903f4cb580c5afafa169d314a7deaf33faa749f59d3a2f8eed80a9
-    Image:         docker.io/datawire/tel2:2.17.0
-    Image ID:      docker.io/datawire/tel2@sha256:e18aed6e7bd3c15cb5a99161c164e0303d20156af68ef138faca98dc2c5754a7
+    Container ID:  docker://b4f2279e58aacdf3426c80381c29f7cc214729a7d44a40acd1a566d778d84cfa
+    Image:         local/tel2:2.23.0-alpha.0
+    Image ID:      docker-pullable://tel2@sha256:0f81a553bb223f4cfe97973d585586439451e120eb2ed8e35d0fe9266b22fd6d
     Port:          9900/TCP
     Host Port:     0/TCP
     Args:
       agent
     State:          Running
-      Started:      Sun, 07 Jan 2024 01:01:34 +0100
+      Started:      Thu, 03 Apr 2025 09:43:39 +0200
     Ready:          True
     Restart Count:  0
     Readiness:      exec [/bin/stat /tmp/agent/ready] delay=0s timeout=1s period=10s #success=1 #failure=3
     Environment:
-      _TEL_AGENT_POD_IP:       (v1:status.podIP)
-      _TEL_AGENT_NAME:        hello-75b7c6d484-9r4xd (v1:metadata.name)
-      A_TELEPRESENCE_MOUNTS:  /var/run/secrets/kubernetes.io/serviceaccount
+      AGENT_CONFIG:         (v1:metadata.annotations['telepresence.io/agent-config'])
+      _TEL_AGENT_POD_IP:    (v1:status.podIP)
+      _TEL_AGENT_POD_UID:   (v1:metadata.uid)
+      _TEL_AGENT_NAME:     hello-87f7f548f-mdg8d (v1:metadata.name)
     Mounts:
-      /etc/traffic-agent from traffic-config (rw)
       /tel_app_exports from export-volume (rw)
-      /tel_app_mounts/echoserver/var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-svf4h (ro)
-      /tel_pod_info from traffic-annotations (rw)
+      /tel_app_mounts/echoserver/var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-zgfs5 (ro)
       /tmp from tel-agent-tmp (rw)
-      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-svf4h (ro)
+      /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-zgfs5 (ro)
 Conditions:
-  Type              Status
-  Initialized       True
-  Ready             True
-  ContainersReady   True
-  PodScheduled      True
+  Type                        Status
+  PodReadyToStartContainers   True 
+  Initialized                 True 
+  Ready                       True 
+  ContainersReady             True 
+  PodScheduled                True 
 Volumes:
-  kube-api-access-svf4h:
+  kube-api-access-zgfs5:
     Type:                    Projected (a volume that contains injected data from multiple sources)
     TokenExpirationSeconds:  3607
     ConfigMapName:           kube-root-ca.crt
     ConfigMapOptional:       <nil>
     DownwardAPI:             true
-  traffic-annotations:
-    Type:  DownwardAPI (a volume populated by information about the pod)
-    Items:
-      metadata.annotations -> annotations
-  traffic-config:
-    Type:      ConfigMap (a volume populated by a ConfigMap)
-    Name:      telepresence-agents
-    Optional:  false
   export-volume:
     Type:       EmptyDir (a temporary directory that shares a pod's lifetime)
-    Medium:
+    Medium:     
     SizeLimit:  <unset>
   tel-agent-tmp:
     Type:        EmptyDir (a temporary directory that shares a pod's lifetime)
-    Medium:
+    Medium:      
     SizeLimit:   <unset>
 QoS Class:       BestEffort
 Node-Selectors:  <none>
@@ -327,61 +330,16 @@ Tolerations:     node.kubernetes.io/not-ready:NoExecute op=Exists for 300s
 Events:
   Type    Reason     Age    From               Message
   ----    ------     ----   ----               -------
-  Normal  Scheduled  7m40s  default-scheduler  Successfully assigned default/hello-75b7c6d484-9r4xd to kind-control-plane
-  Normal  Pulled     7m40s  kubelet            Container image "docker.io/datawire/tel2:2.17.0" already present on machine
-  Normal  Created    7m40s  kubelet            Created container tel-agent-init
-  Normal  Started    7m39s  kubelet            Started container tel-agent-init
-  Normal  Pulled     7m39s  kubelet            Container image "registry.k8s.io/echoserver:1.4" already present on machine
-  Normal  Created    7m39s  kubelet            Created container echoserver
-  Normal  Started    7m39s  kubelet            Started container echoserver
-  Normal  Pulled     7m39s  kubelet            Container image "docker.io/datawire/tel2:2.17.0" already present on machine
-  Normal  Created    7m39s  kubelet            Created container traffic-agent
-  Normal  Started    7m39s  kubelet            Started container traffic-agent
-```
-
-Telepresence keeps track of all possible intercepts for containers that have an agent installed in the configmap `telepresence-agents`.
-
-```console
-$ kubectl describe configmap telepresence-agents
-Name:         telepresence-agents
-Namespace:    default
-Labels:       app.kubernetes.io/created-by=traffic-manager
-              app.kubernetes.io/name=telepresence-agents
-              app.kubernetes.io/version=2.17.0
-Annotations:  <none>
-
-Data
-====
-hello:
-----
-agentImage: localhost:5000/tel2:2.17.0
-agentName: hello
-containers:
-- Mounts: null
-  envPrefix: A_
-  intercepts:
-  - agentPort: 9900
-    containerPort: 8080
-    protocol: TCP
-    serviceName: hello
-    servicePort: 80
-    serviceUID: 68a4ecd7-0a12-44e2-9293-dc16fb205621
-    targetPortNumeric: true
-  mountPoint: /tel_app_mounts/echoserver
-  name: echoserver
-logLevel: debug
-managerHost: traffic-manager.ambassador
-managerPort: 8081
-namespace: default
-pullPolicy: IfNotPresent
-workloadKind: Deployment
-workloadName: hello
-
-
-BinaryData
-====
-
-Events:  <none>
+  Normal  Scheduled  8m     default-scheduler  Successfully assigned default/hello-87f7f548f-mdg8d to lima-rancher-desktop
+  Normal  Pulled     7m59s  kubelet            Container image "local/tel2:2.23.0-alpha.0" already present on machine
+  Normal  Created    7m59s  kubelet            Created container: tel-agent-init
+  Normal  Started    7m59s  kubelet            Started container tel-agent-init
+  Normal  Pulled     7m58s  kubelet            Container image "registry.k8s.io/echoserver:1.9" already present on machine
+  Normal  Created    7m58s  kubelet            Created container: echoserver
+  Normal  Started    7m58s  kubelet            Started container echoserver
+  Normal  Pulled     7m58s  kubelet            Container image "local/tel2:2.23.0-alpha.0" already present on machine
+  Normal  Created    7m58s  kubelet            Created container: traffic-agent
+  Normal  Started    7m58s  kubelet            Started container traffic-agent
 ```
 
 ### Uninstalling
@@ -410,7 +368,7 @@ encountered. The files are named `daemon.log` and `connector.log`. The location 
 
 ## How it works
 
-When Telepresence 2 connects to a Kubernetes cluster, it
+When Telepresence 2 connects to a Kubernetes cluster, it:
 
  1. Ensures Traffic Manager is installed in the cluster.
  2. Looks for the relevant subnets in the kubernetes cluster.
