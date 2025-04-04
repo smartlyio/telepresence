@@ -24,6 +24,15 @@
 #
 # For older changes, see CHANGELOG.OLD.md
 items:
+  - version: 2.22.3
+    date: (TBD)
+    notes:
+      - type: bugfix
+        title: Recreating namespaces was not possible when using a dynamically namespaced Traffic Manager
+        body: >-
+          A shared informer was sometimes reused when namespaces were removed and then later added again, leading
+          to errors like "handler ... was not added to shared informer because it has stopped already".
+        docs: https://github.com/telepresenceio/telepresence/issues/3831
   - version: 2.22.2
     date: 2025-03-28
     notes:

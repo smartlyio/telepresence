@@ -54,6 +54,15 @@ func GetFactory(ctx context.Context, ns string) GlobalFactory {
 	return gf
 }
 
+func DropFactory(ctx context.Context, ns string) {
+	if ns == "" {
+		return
+	}
+	if fm, ok := ctx.Value(factoryKey{}).(*xsync.MapOf[string, GlobalFactory]); ok {
+		fm.Delete(ns)
+	}
+}
+
 func GetK8sFactory(ctx context.Context, ns string) informers.SharedInformerFactory {
 	f := GetFactory(ctx, ns)
 	if f != nil {

@@ -442,11 +442,11 @@ func (c *configWatcher) namespacesChangeWatcher(ctx context.Context) error {
 					dlog.Debugf(ctx, "Adding watchers for namespace %s", ns)
 					iwc, err := c.startInformers(ctx, ns)
 					if err != nil {
-						dlog.Errorf(ctx, "Failed to create watchers namespace %s: %v", ns, err)
+						dlog.Errorf(ctx, "Failed to create watchers for namespace %s: %v", ns, err)
 						return nil, true
 					}
 					if err = c.startWatchers(ctx, iwc); err != nil {
-						dlog.Errorf(ctx, "Failed to start watchers namespace %s: %v", ns, err)
+						dlog.Errorf(ctx, "Failed to start watchers for namespace %s: %v", ns, err)
 						return nil, true
 					}
 					return iwc, false
@@ -475,7 +475,10 @@ func (c *configWatcher) DeleteMapsAndRolloutAll(ctx context.Context) {
 }
 
 func (c *configWatcher) deleteMapsAndRolloutNS(ctx context.Context, ns string, iwc *informersWithCancel) {
-	defer c.informers.Delete(ns)
+	defer func() {
+		c.informers.Delete(ns)
+		informer.DropFactory(ctx, ns)
+	}()
 
 	dlog.Debugf(ctx, "Cancelling watchers for namespace %s", ns)
 	for i := 0; i < watcherMax; i++ {
