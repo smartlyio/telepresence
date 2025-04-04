@@ -195,6 +195,21 @@ func (s *cluster) Initialize(ctx context.Context) context.Context {
 		s.agentVersion = s.managerVersion
 	}
 
+	// We cannot use t.TempDir() here, because it will not mount correctly in
+	// rancher-desktop and docker-desktop (unless they are configured to allow
+	// mounts directly from /tmp). So we use a tempdir in BUILD_OUTPUT instead
+	// because it's believed to be both mountable and writable.
+	tempDir := dos.Getenv(ctx, "TELEPRESENCE_TEMP_DIR")
+	if tempDir == "" {
+		tempDir = filepath.Join(BuildOutput(ctx), "tmp")
+	}
+	_ = dos.RemoveAll(ctx, tempDir)
+	require.NoError(t, dos.MkdirAll(ctx, tempDir, 0o777))
+	ctx = withTempDirBase(ctx, &tempDirBase{tempDir: tempDir})
+	t.Cleanup(func() {
+		_ = os.RemoveAll(tempDir)
+	})
+
 	registry := dos.Getenv(ctx, "TELEPRESENCE_REGISTRY")
 	if registry == "" {
 		registry = "ghcr.io/telepresenceio"
@@ -290,11 +305,8 @@ func (s *cluster) Initialize(ctx context.Context) context.Context {
 
 	s.ensureQuit(ctx)
 	s.ensureNoManager(ctx)
-	_ = Run(ctx, "kubectl", "delete", "ns", "-l", AssignPurposeLabel)
 	_ = Run(ctx, "kubectl", "delete", "-f", filepath.Join("testdata", "k8s", "client_rbac.yaml"))
-	_ = Run(ctx, "kubectl", "delete", "ns", "-l", AssignPurposeLabel)
-	_ = Run(ctx, "kubectl", "delete", "pv", "-l", AssignPurposeLabel)
-	_ = Run(ctx, "kubectl", "delete", "storageclass", "-l", AssignPurposeLabel)
+	_ = Run(ctx, "kubectl", "delete", "all", "-l", AssignPurposeLabel)
 	return ctx
 }
 
@@ -354,10 +366,7 @@ func (s *cluster) tearDown(ctx context.Context) {
 	if s.kubeConfig != "" {
 		ctx = WithWorkingDir(ctx, GetOSSRoot(ctx))
 		_ = Run(ctx, "kubectl", "delete", "-f", filepath.Join("testdata", "k8s", "client_rbac.yaml"))
-		_ = Run(ctx, "kubectl", "delete", "--wait=false", "ns", "-l", AssignPurposeLabel)
-		_ = Run(ctx, "kubectl", "delete", "--wait=false", "pv", "-l", AssignPurposeLabel)
-		_ = Run(ctx, "kubectl", "delete", "--wait=false", "storageclass", "-l", AssignPurposeLabel)
-		_ = Run(ctx, "kubectl", "delete", "--wait=false", "mutatingwebhookconfigurations", "-l", AssignPurposeLabel)
+		_ = Run(ctx, "kubectl", "delete", "--wait=false", "all", "-l", AssignPurposeLabel)
 	}
 }
 
@@ -439,7 +448,7 @@ func (s *cluster) withBasicConfig(c context.Context, t *testing.T) context.Conte
 	require.NoError(t, err)
 	configYamlStr := string(configYaml)
 
-	configDir := t.TempDir()
+	configDir := TempDir(c)
 	c = filelocation.WithAppUserConfigDir(c, configDir)
 	c, err = SetConfig(c, configDir, configYamlStr)
 	require.NoError(t, err)
@@ -1071,7 +1080,7 @@ func WithConfig(c context.Context, modifierFunc func(config client.Config)) cont
 	configYaml, err := configCopy.(client.Config).MarshalYAML()
 	require.NoError(t, err)
 	configYamlStr := string(configYaml)
-	configDir, err := os.MkdirTemp(t.TempDir(), "config")
+	configDir, err := os.MkdirTemp(TempDir(c), "config")
 	require.NoError(t, err)
 	c, err = SetConfig(c, configDir, configYamlStr)
 	require.NoError(t, err)
