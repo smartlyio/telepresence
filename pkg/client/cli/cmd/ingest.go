@@ -11,7 +11,7 @@ import (
 func ingestCmd() *cobra.Command {
 	ic := &ingest.Command{}
 	cmd := &cobra.Command{
-		Use:   "ingest [flags] <workload> [-- <command with arguments...>]",
+		Use:   "ingest [flags] <name> [-- [[docker run flags] <image name>] OR [<command>]] args...]",
 		Args:  cobra.MinimumNArgs(1),
 		Short: "Ingest a container",
 		Annotations: map[string]string{
