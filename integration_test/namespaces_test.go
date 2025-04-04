@@ -233,9 +233,37 @@ func (s *nsSuite) Test_NamespacesDynamic() {
 
 	// Upgrade, to ensure that the proper roles and rolebindings are installed.
 	s.TelepresenceHelmInstallOK(ctx, true)
+	rq.Equal(0, restartCount())
+
 	itest.TelepresenceOk(ctx, "connect", "--manager-namespace", s.managerNamespace(), "--namespace", "delta")
 	st = itest.TelepresenceStatusOk(ctx)
 	rq.Len(st.UserDaemon.MappedNamespaces, 4)
+
+	itest.ApplyEchoService(ctx, "echo", "delta", 80)
+
+	// Check that list output includes the service from "delta"
+	lst := itest.TelepresenceOk(ctx, "list")
+	rq.Contains(lst, "deployment echo:")
+	itest.TelepresenceDisconnectOk(ctx)
+
+	// Delete and recreate the namespace
+	s.NoError(itest.Kubectl(ctx, "", "delete", "namespace", "delta"))
+	rq.NoError(itest.Kubectl(dos.WithStdin(ctx, bytes.NewReader(data)), "", "apply", "-f", "-"))
+
+	// Upgrade, to ensure that the proper roles and rolebindings are installed.
+	s.TelepresenceHelmInstallOK(ctx, true)
+	rq.Equal(0, restartCount())
+
+	itest.TelepresenceOk(ctx, "connect", "--manager-namespace", s.managerNamespace(), "--namespace", "delta")
+	st = itest.TelepresenceStatusOk(ctx)
+	rq.Len(st.UserDaemon.MappedNamespaces, 4)
+
+	itest.ApplyEchoService(ctx, "echo", "delta", 80)
+
+	// Check that list output still includes the service from "delta"
+	lst = itest.TelepresenceOk(ctx, "list")
+	rq.Contains(lst, "deployment echo:")
+	itest.TelepresenceDisconnectOk(ctx)
 }
 
 func (s *nsSuite) Test_NamespacesStatic() {
