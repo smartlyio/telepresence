@@ -28,6 +28,15 @@ items:
     date: (TBD)
     notes:
       - type: bugfix
+        title: The Windows install script didn't handle upgrades properly
+        body: |-
+          The following changes were made:
+          
+            - The script now requires administrator privileges
+            - Telepresence is installed to "$env:ProgramFiles\telepresence"
+            - The Path environment is only updated when there's a need for it
+        docs: https://github.com/telepresenceio/telepresence/issues/3827
+      - type: bugfix
         title: The Telepresence Helm chart could not be used as a dependency in another chart.
         body: >-
           The JSON schema validation implemented in Telepresence 2.22.0 had a defect: it rejected the `global` object.

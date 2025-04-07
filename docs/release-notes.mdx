@@ -9,6 +9,16 @@ import { Note, Title, Body } from '@site/src/components/ReleaseNotes'
 # Telepresence Release Notes
 ## Version 2.22.3
 <Note>
+	<Title type="bugfix" docs="https://github.com/telepresenceio/telepresence/issues/3827">The Windows install script didn't handle upgrades properly</Title>
+	<Body>
+The following changes were made:
+
+  - The script now requires administrator privileges
+  - Telepresence is installed to "$env:ProgramFiles\telepresence"
+  - The Path environment is only updated when there's a need for it
+  </Body>
+</Note>
+<Note>
 	<Title type="bugfix" docs="https://github.com/telepresenceio/telepresence/issues/3833">The Telepresence Helm chart could not be used as a dependency in another chart.</Title>
 	<Body>
 The JSON schema validation implemented in Telepresence 2.22.0 had a defect: it rejected the `global` object. This object, a Helm-managed construct, facilitates the propagation of arbitrary configurations from a parent chart to its dependencies. Consequently, charts intended for dependency use must permit the presence of the `global` object.

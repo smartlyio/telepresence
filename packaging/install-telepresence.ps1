@@ -1,6 +1,8 @@
+#Requires -RunAsAdministrator
+
 param
 (
-    $Path = "C:\telepresence"
+    $Path = "$env:ProgramFiles\telepresence"
 )
 
 $current_directory = (Get-Location).path
@@ -18,5 +20,9 @@ if(!(test-path $Path))
 Copy-Item "telepresence.exe" -Destination "$Path" -Force
 Copy-Item "wintun.dll" -Destination "$Path" -Force
 
-# We update the PATH to include telepresence and its dependency, sshfs-win
-[Environment]::SetEnvironmentVariable("Path", "$Path;C:\Program Files\SSHFS-Win\bin;$ENV:Path", "Machine")
+# Update PATH if entries do not exist only
+$currentPath = [Environment]::GetEnvironmentVariable("Path", "Machine")
+@("$Path", "C:\Program Files\SSHFS-Win\bin") | Where-Object { $currentPath -notlike "*$_*" } | ForEach-Object { $currentPath = "$_;$currentPath" }
+[Environment]::SetEnvironmentVariable("Path", $currentPath, "Machine")
+
+echo "Telepresence installed to $Path"
