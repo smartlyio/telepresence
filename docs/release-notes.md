@@ -8,6 +8,12 @@
 A shared informer was sometimes reused when namespaces were removed and then later added again, leading to errors like "handler ... was not added to shared informer because it has stopped already".
 </div>
 
+## <div style="display:flex;"><img src="images/bugfix.png" alt="bugfix" style="width:30px;height:fit-content;"/><div style="display:flex;margin-left:7px;">Single label name DNS lookups didn't work unless at least one traffic-agent was installed</div></div>
+<div style="margin-left: 15px">
+
+A problem with incorrect handling of single label names in the traffic-manager's DNS resolver was fixed. The problem would cause lookups like `curl echo` to fail, even though telepresence was connected to a namespace containing an "echo" service, unless at least one of the workloads in the connected namespace had a traffic-agent.
+</div>
+
 ## Version 2.22.2 <span style="font-size: 16px;">(March 28)</span>
 ## <div style="display:flex;"><img src="images/bugfix.png" alt="bugfix" style="width:30px;height:fit-content;"/><div style="display:flex;margin-left:7px;">[Panic when using telepresence replace in a IPv6-only cluster](https://github.com/telepresenceio/telepresence/issues/3828)</div></div>
 <div style="margin-left: 15px">
