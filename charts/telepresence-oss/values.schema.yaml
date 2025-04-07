@@ -251,6 +251,10 @@ properties:
         items:
           $ref: "#/$defs/subject"
 
+  global:
+    type: object
+    additionalProperties: true
+
   grpc:
     type: object
     additionalProperties: false

@@ -103,7 +103,14 @@ func (s *nsPair) setup(ctx context.Context) bool {
 		return false
 	}
 	err := Kubectl(ctx, s.Namespace, "apply", "-f", filepath.Join(GetOSSRoot(ctx), "testdata", "k8s", "client_sa.yaml"))
-	assert.NoError(t, err, "failed to create connect ServiceAccount")
+	if assert.NoError(t, err, "failed to create connect ServiceAccount") {
+		db, err := ReadTemplate(ctx, filepath.Join("testdata", "k8s", "client_rancher.goyaml"), map[string]string{
+			"ManagerNamespace": s.Namespace,
+		})
+		if assert.NoError(t, err) {
+			assert.NoError(t, Kubectl(dos.WithStdin(ctx, bytes.NewReader(db)), s.Namespace, "apply", "-f", "-"))
+		}
+	}
 	return !t.Failed()
 }
 
