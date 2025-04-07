@@ -27,13 +27,17 @@ items:
   - version: 2.22.3
     date: (TBD)
     notes:
+      - type: change
+        title: The Windows install script will now install Telepresence to "%ProgramFiles%\telepresence"
+        body: |-
+          Telepresence is now installed into "%ProgramFiles%\telepresence" instead of "C:\telepresence".
+          The directory and the Path entry for  `C:\telepresence` are not longer used and should be removed.
       - type: bugfix
         title: The Windows install script didn't handle upgrades properly
         body: |-
           The following changes were made:
           
             - The script now requires administrator privileges
-            - Telepresence is installed to "$env:ProgramFiles\telepresence"
             - The Path environment is only updated when there's a need for it
         docs: https://github.com/telepresenceio/telepresence/issues/3827
       - type: bugfix
