@@ -1,10 +1,14 @@
 package integration_test
 
 import (
+	"archive/tar"
+	"compress/gzip"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -329,4 +333,113 @@ func ensureTrafficManager(ctx context.Context, kc *k8s.Cluster) error {
 		kc.Kubeconfig,
 		k8s.GetManagerNamespace(ctx),
 		&helm.Request{Type: helm.Install})
+}
+
+func unTgz(ctx context.Context, srcTgz, dstPath string) error {
+	rd, err := os.Open(srcTgz)
+	if err != nil {
+		return err
+	}
+	defer rd.Close()
+
+	err = dos.MkdirAll(ctx, dstPath, 0o755)
+	if err != nil {
+		return err
+	}
+
+	zrd, err := gzip.NewReader(rd)
+	if err != nil {
+		return err
+	}
+	src := tar.NewReader(zrd)
+	for {
+		header, err := src.Next()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return err
+		}
+
+		dst := dstPath + "/" + header.Name
+		mode := os.FileMode(header.Mode)
+		switch header.Typeflag {
+		case tar.TypeDir:
+			err = dos.MkdirAll(ctx, dst, mode)
+			if err != nil {
+				return err
+			}
+		case tar.TypeReg:
+			err = dos.MkdirAll(ctx, filepath.Dir(dst), 0o755)
+			if err != nil {
+				return err
+			}
+			w, err := dos.OpenFile(ctx, dst, os.O_CREATE|os.O_WRONLY, mode)
+			if err != nil {
+				return err
+			}
+			_, err = io.Copy(w, src)
+			_ = w.Close()
+			if err != nil {
+				return err
+			}
+		default:
+			return fmt.Errorf("unable to untar type : %c in file %s", header.Typeflag, header.Name)
+		}
+	}
+	return nil
+}
+
+func (is *installSuite) Test_HelmSubChart() {
+	if runtime.GOOS == "windows" || !(is.ManagerVersion().EQ(version.Structured) && is.ClientVersion().EQ(version.Structured)) {
+		is.T().Skip("Not part of compatibility tests. Need forward slashes in path, and PackageHelmChart assumes current version.")
+	}
+	ctx := is.Context()
+	require := is.Require()
+
+	t := is.T()
+	subChart, err := is.PackageHelmChart(ctx)
+	require.NoError(err)
+
+	base := t.TempDir()
+	require.NoError(unTgz(ctx, subChart, filepath.Join(base, "charts")))
+
+	chart := fmt.Sprintf(`apiVersion: v2
+dependencies:
+  - name: telepresence-oss
+    registry: ../charts/telepresence-oss
+    version: %s
+    condition: enabled
+description: Helm chart to deploy telepresence
+name: parent
+version: 1.0.0`, is.ClientVersion())
+
+	vals := is.GetSetArgsForHelm(ctx, map[string]any{
+		"global": map[string]any{
+			"some-string": "value",
+			"some-obj": map[string]any{
+				"foo": "bar",
+			},
+			"some-bool": true,
+		},
+		"telepresence-oss": map[string]any{
+			"clientRbac": map[string]any{
+				"create": true,
+				"subjects": []rbac.Subject{
+					{
+						Kind:      "ServiceAccount",
+						Name:      itest.TestUser,
+						Namespace: is.ManagerNamespace(),
+					},
+				},
+			},
+		},
+	}, false)
+	require.NoError(dos.WriteFile(ctx, filepath.Join(base, "Chart.yaml"), []byte(chart), 0o644))
+
+	vals = append([]string{"template", "parent", base, "-n", is.ManagerNamespace()}, vals...)
+	so, err := itest.Output(ctx, "helm", vals...)
+	require.NoError(err)
+	require.Contains(so, "# Source: parent/charts/telepresence-oss/templates/clientRbac/connect.yaml")
+	require.Contains(so, "name: "+itest.TestUser)
 }

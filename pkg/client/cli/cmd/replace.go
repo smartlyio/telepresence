@@ -10,7 +10,7 @@ import (
 func replaceCmd() *cobra.Command {
 	ic := &intercept.Command{}
 	cmd := &cobra.Command{
-		Use:   "replace [flags] <replace_base_name> [-- <command with arguments...>]",
+		Use:   "replace [flags] <name> [-- [[docker run flags] <image name>] OR [<command>]] args...]",
 		Args:  cobra.MinimumNArgs(1),
 		Short: "Replace a container",
 		Annotations: map[string]string{

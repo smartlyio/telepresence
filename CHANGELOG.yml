@@ -36,6 +36,43 @@ items:
           Similar to an `ingest`, a `wiretap` will always enforce read-only status on all volume mounts, and since that
           makes the `wiretap` completely read-only, there's no limit to how many simultaneous wiretaps that can be
           served. In fact, a `wiretap` and an `intercept` on the same port can run simultaneously.
+  - version: 2.22.3
+    date: 2025-04-08
+    notes:
+      - type: change
+        title: The Windows install script will now install Telepresence to "%ProgramFiles%\telepresence"
+        body: |-
+          Telepresence is now installed into "%ProgramFiles%\telepresence" instead of "C:\telepresence".
+          The directory and the Path entry for  `C:\telepresence` are not longer used and should be removed.
+      - type: bugfix
+        title: The Windows install script didn't handle upgrades properly
+        body: |-
+          The following changes were made:
+          
+            - The script now requires administrator privileges
+            - The Path environment is only updated when there's a need for it
+        docs: https://github.com/telepresenceio/telepresence/issues/3827
+      - type: bugfix
+        title: The Telepresence Helm chart could not be used as a dependency in another chart.
+        body: >-
+          The JSON schema validation implemented in Telepresence 2.22.0 had a defect: it rejected the `global` object.
+          This object, a Helm-managed construct, facilitates the propagation of arbitrary configurations from a parent
+          chart to its dependencies. Consequently, charts intended for dependency use must permit the presence of the
+          `global` object.
+        docs: https://github.com/telepresenceio/telepresence/issues/3833
+      - type: bugfix
+        title: Recreating namespaces was not possible when using a dynamically namespaced Traffic Manager
+        body: >-
+          A shared informer was sometimes reused when namespaces were removed and then later added again, leading
+          to errors like "handler ... was not added to shared informer because it has stopped already".
+        docs: https://github.com/telepresenceio/telepresence/issues/3831
+      - type: bugfix
+        title: Single label name DNS lookups didn't work unless at least one traffic-agent was installed
+        body: >-
+          A problem with incorrect handling of single label names in the traffic-manager's DNS resolver was fixed. The
+          problem would cause lookups like `curl echo` to fail, even though telepresence was connected to a namespace
+          containing an "echo" service, unless at least one of the workloads in the connected namespace had a
+          traffic-agent.
   - version: 2.22.2
     date: 2025-03-28
     notes:

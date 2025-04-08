@@ -10,7 +10,7 @@ import (
 func interceptCmd() *cobra.Command {
 	ic := &intercept.Command{}
 	cmd := &cobra.Command{
-		Use:   "intercept [flags] <intercept_base_name> [-- <command with arguments...>]",
+		Use:   "intercept [flags] <name> [-- [[docker run flags] <image name>] OR [<command>]] args...]",
 		Args:  cobra.MinimumNArgs(1),
 		Short: "Intercept a service",
 		Annotations: map[string]string{
