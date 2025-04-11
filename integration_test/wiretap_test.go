@@ -164,7 +164,7 @@ func (s *wiretapSuite) Test_MultipleTapsOnOnePort() {
 		var soj listOut
 		s.Require().NoError(json.Unmarshal([]byte(so), &soj))
 		if s.Len(soj.Stdout, 1) {
-			iis := soj.Stdout[0].InterceptInfos
+			iis := soj.Stdout[0].InterceptInfo
 			if s.Len(iis, 2) {
 				s.True(iis[0].Spec.Wiretap)
 				s.True(iis[1].Spec.Wiretap)
@@ -195,7 +195,7 @@ func (s *wiretapSuite) Test_MultipleTapsOnOnePort() {
 		var soj listOut
 		s.Require().NoError(json.Unmarshal([]byte(so), &soj))
 		if s.Len(soj.Stdout, 1) {
-			iis := soj.Stdout[0].InterceptInfos
+			iis := soj.Stdout[0].InterceptInfo
 			if s.Len(iis, 2) {
 				s.True(iis[0].Spec.Wiretap)
 				s.True(iis[1].Spec.Wiretap)
@@ -206,7 +206,7 @@ func (s *wiretapSuite) Test_MultipleTapsOnOnePort() {
 		soj.Stdout = nil
 		s.Require().NoError(json.Unmarshal([]byte(so), &soj))
 		if s.Len(soj.Stdout, 1) {
-			iis := soj.Stdout[0].InterceptInfos
+			iis := soj.Stdout[0].InterceptInfo
 			if s.Len(iis, 1) {
 				s.False(iis[0].Spec.Wiretap)
 			}
