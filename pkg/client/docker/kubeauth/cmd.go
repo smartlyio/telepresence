@@ -2,7 +2,9 @@ package kubeauth
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io/fs"
 	"net"
 	"os"
 	"path/filepath"
@@ -128,7 +130,7 @@ func (as *authService) keepPortFileAlive(ctx context.Context) error {
 	now := time.Now()
 	for {
 		if err := os.Chtimes(as.portFile, now, now); err != nil {
-			if !os.IsNotExist(err) {
+			if !errors.Is(err, fs.ErrNotExist) {
 				return fmt.Errorf("failed to update timestamp on %s: %v", as.portFile, err)
 			}
 			// File is removed, so stop trying to update its timestamps and die

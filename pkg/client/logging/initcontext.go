@@ -3,7 +3,9 @@ package logging
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
+	"io/fs"
 	"log"
 	"os"
 	"path/filepath"
@@ -81,7 +83,7 @@ func SummarizeLog(ctx context.Context, name string) (string, error) {
 	filename := filepath.Join(filelocation.AppUserLogDir(ctx), name+".log")
 	file, err := dos.Open(ctx, filename)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, fs.ErrNotExist) {
 			err = nil
 		}
 		return "", err

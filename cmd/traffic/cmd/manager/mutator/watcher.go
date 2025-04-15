@@ -99,7 +99,7 @@ func (c *configWatcher) regenerateAgentConfigs(ctx context.Context, ns string, g
 		wls := make(map[workloadKey]agentconfig.SidecarExt, len(wp.pods))
 		podsOfInterest := make([]*core.Pod, 0, len(wp.pods))
 		for _, pod := range wp.pods {
-			cfgJSON, ok := pod.ObjectMeta.Annotations[annotation.Config]
+			cfgJSON, ok := pod.Annotations[annotation.Config]
 			if !ok {
 				continue
 			}

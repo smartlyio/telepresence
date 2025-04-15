@@ -236,7 +236,7 @@ func DiscoverDaemon(ctx context.Context, match *regexp.Regexp, daemonID *daemon.
 	}
 	info, err := daemon.LoadMatchingInfo(ctx, match)
 	if err != nil {
-		if os.IsNotExist(err) && !cr.Docker {
+		if errors.Is(err, fs.ErrNotExist) && !cr.Docker {
 			// Try dialing the host daemon using the well-known socket.
 			if conn, sockErr := socket.Dial(ctx, socket.UserDaemonPath(ctx), false); sockErr == nil {
 				return newUserDaemon(ctx, conn, daemonID)
@@ -291,7 +291,7 @@ func launchConnectorDaemon(ctx context.Context, daemonID *daemon.Identifier, con
 		logDir := filelocation.AppUserLogDir(ctx)
 		logFile := filepath.Join(logDir, "connector.log")
 		if _, err := os.Stat(logFile); err != nil {
-			if !os.IsNotExist(err) {
+			if !errors.Is(err, fs.ErrNotExist) {
 				return ctx, false, err
 			}
 			fh, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY, 0o666)

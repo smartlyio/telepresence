@@ -2,7 +2,9 @@ package itest
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -23,7 +25,7 @@ func LoadEnv(ctx context.Context) context.Context {
 	data, err := os.ReadFile(cf)
 	var icEnv map[string]string
 	if err != nil {
-		if !os.IsNotExist(err) {
+		if !errors.Is(err, fs.ErrNotExist) {
 			getT(ctx).Fatal(cf, err)
 		}
 	} else {

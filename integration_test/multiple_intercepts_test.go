@@ -111,7 +111,7 @@ func (s *multipleInterceptsSuite) Test_Intercepts() {
 						dlog.Infof(ctx, "%v", err)
 						return false
 					}
-					if 1 != len(ip) {
+					if len(ip) != 1 {
 						dlog.Infof(ctx, "Lookup for %s returned %v", svc, ip)
 						return false
 					}

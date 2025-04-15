@@ -31,7 +31,7 @@ bindir ?= $(or $(shell go env GOBIN),$(shell go env GOPATH|cut -d: -f1)/bin)
 # https://github.com/moby/buildkit/blob/master/frontend/dockerfile/docs/syntax.md.
 export DOCKER_BUILDKIT := 1
 
-GOLANGCI_VERSION:=v1.64.8
+GOLANGCI_VERSION:=v2.1.2
 
 .PHONY: FORCE
 FORCE:
@@ -396,7 +396,7 @@ shellscripts += ./packaging/windows-package.sh
 lint: lint-rpc lint-go
 
 lint-go: lint-deps ## (QA) Run the golangci-lint
-	$(eval badimports = $(shell find cmd integration_test pkg -name '*.go' | grep -v '/mocks/' | xargs $(tools/gosimports) --local github.com/datawire/,github.com/telepresenceio/ -l))
+	$(eval badimports = $(shell find cmd integration_test pkg -name '*.go' | grep -v '/mocks/' | grep -v '.pb.go' | xargs $(tools/gosimports) --local github.com/datawire/,github.com/telepresenceio/ -l))
 	$(if $(strip $(badimports)), echo "The following files have bad import ordering (use make format to fix): " $(badimports) && false)
 ifeq ($(GOOS),windows)
 	docker run -e GOOS=$(GOOS) --rm -v $$(pwd):/app -v ~/.cache/golangci-lint/$(GOLANGCI_VERSION):/root/.cache -w /app golangci/golangci-lint:$(GOLANGCI_VERSION) golangci-lint \
@@ -414,7 +414,7 @@ endif
 
 .PHONY: format
 format: lint-deps ## (QA) Automatically fix linter complaints
-	find cmd integration_test pkg -name '*.go' | grep -v '/mocks/' | xargs $(tools/gosimports) --local github.com/datawire/,github.com/telepresenceio/ -w
+	find cmd integration_test pkg -name '*.go' | grep -v '/mocks/' | grep -v '.pb.go' | xargs $(tools/gosimports) --local github.com/datawire/,github.com/telepresenceio/ -w
 ifeq ($(GOHOSTOS),windows)
 	docker run -e GOOS=$(GOOS) --rm -v $$(pwd):/app -v ~/.cache/golangci-lint/$(GOLANGCI_VERSION):/root/.cache -w /app golangci/golangci-lint:$(GOLANGCI_VERSION) golangci-lint \
 	run --timeout 8m --fix ./cmd/telepresence/... ./integration_test/... ./pkg/...

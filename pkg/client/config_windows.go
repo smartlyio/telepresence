@@ -34,11 +34,11 @@ type Network struct {
 }
 
 func (n *Network) merge(o *Network) {
-	if o.DNSWithFallback != defaultDNSWithFallback { //nolint:gosimple // explicit default comparison
+	if o.DNSWithFallback != defaultDNSWithFallback {
 		n.DNSWithFallback = o.DNSWithFallback
 	}
 }
 
 func (n *Network) IsZero() bool {
-	return n == nil || n.DNSWithFallback == defaultDNSWithFallback //nolint:gosimple // explicit default comparison
+	return n == nil || n.DNSWithFallback == defaultDNSWithFallback
 }

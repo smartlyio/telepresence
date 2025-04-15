@@ -50,7 +50,7 @@ func addDaemonVersions(ctx context.Context, kvf *ioutil.KeyValueFormatter) {
 		switch {
 		case err == nil:
 			kvf.Add(version.Name, version.Version)
-		case err == connect.ErrNoRootDaemon:
+		case errors.Is(err, connect.ErrNoRootDaemon):
 			kvf.Add("Root Daemon", "not running")
 		default:
 			kvf.Add("Root Daemon", fmt.Sprintf("error: %v", err))

@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"net"
 	"os"
 
@@ -46,7 +47,7 @@ func listen(_ context.Context, processName, socketName string) (net.Listener, er
 func exists(path string) (bool, error) {
 	s, err := os.Stat(path)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, fs.ErrNotExist) {
 			err = nil
 		}
 		return false, err

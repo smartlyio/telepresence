@@ -27,10 +27,11 @@ func (a *ContainerBuilder) AgentContainer(ctx context.Context) (*core.Container,
 	confCns := a.configuredContainers(ctx)
 
 	a.eachConfiguredContainer(confCns, func(app *core.Container, cc *Container) {
-		if cc.Replace == ReplacePolicyContainer {
+		switch cc.Replace {
+		case ReplacePolicyContainer:
 			// Simply inherit the ports of the replaced container
 			ports = append(ports, app.Ports...)
-		} else if cc.Replace == ReplacePolicyIntercept {
+		case ReplacePolicyIntercept:
 			for _, ic := range PortUniqueIntercepts(cc) {
 				ports = append(ports, core.ContainerPort{
 					Name:          ic.ContainerPortName,
@@ -38,6 +39,7 @@ func (a *ContainerBuilder) AgentContainer(ctx context.Context) (*core.Container,
 					Protocol:      ic.Protocol,
 				})
 			}
+		default:
 		}
 	})
 
@@ -203,7 +205,7 @@ func (a *ContainerBuilder) configuredContainers(ctx context.Context) []*core.Con
 			if app.Name == ContainerName {
 				// The pod might hold JSON of replaced containers from an earlier patch
 				annName := annotation.ReplacedContainerPrefix + cc.Name
-				if appJson, ok := a.Pod.ObjectMeta.Annotations[annName]; ok {
+				if appJson, ok := a.Pod.Annotations[annName]; ok {
 					var cn core.Container
 					err := json.Unmarshal([]byte(appJson), &cn)
 					if err != nil {

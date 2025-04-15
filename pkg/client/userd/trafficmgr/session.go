@@ -34,7 +34,6 @@ import (
 	"github.com/datawire/dlib/dlog"
 	"github.com/datawire/dlib/dtime"
 	"github.com/telepresenceio/telepresence/rpc/v2/common"
-	"github.com/telepresenceio/telepresence/rpc/v2/connector"
 	rpc "github.com/telepresenceio/telepresence/rpc/v2/connector"
 	rootdRpc "github.com/telepresenceio/telepresence/rpc/v2/daemon"
 	"github.com/telepresenceio/telepresence/rpc/v2/manager"
@@ -157,13 +156,13 @@ func NewSession(
 	ctx context.Context,
 	cri userd.ConnectRequest,
 	config *client.Kubeconfig,
-) (rc context.Context, _ userd.Session, info *connector.ConnectInfo) {
+) (rc context.Context, _ userd.Session, info *rpc.ConnectInfo) {
 	dlog.Info(ctx, "-- Starting new session")
 
 	cr := cri.Request()
 	connectStart := time.Now()
 	defer func() {
-		if info.Error == connector.ConnectInfo_UNSPECIFIED {
+		if info.Error == rpc.ConnectInfo_UNSPECIFIED {
 			scout.Report(ctx, "connect",
 				scout.Entry{
 					Key:   "time_to_connect",
@@ -200,7 +199,7 @@ func NewSession(
 		return ctx, nil, connectError(rpc.ConnectInfo_CLUSTER_FAILED, err)
 	}
 	dlog.Infof(ctx, "Connected to context %s, namespace %s (%s)", cluster.Context, cluster.Namespace, cluster.Server)
-	ctx = portforward.WithRestConfig(ctx, cluster.Kubeconfig.RestConfig)
+	ctx = portforward.WithRestConfig(ctx, cluster.RestConfig)
 
 	ctx = cluster.WithJoinedClientSetInterface(ctx)
 
@@ -819,11 +818,11 @@ func (s *session) UpdateStatus(c context.Context, cri userd.ConnectRequest) *rpc
 				}
 			}
 		}
-		if !(envEQ && s.Kubeconfig.ContextServiceAndFlagsEqual(config)) {
+		if !(envEQ && s.ContextServiceAndFlagsEqual(config)) {
 			return &rpc.ConnectInfo{
 				Error:            rpc.ConnectInfo_MUST_RESTART,
-				ClusterContext:   s.Kubeconfig.Context,
-				ClusterServer:    s.Kubeconfig.Server,
+				ClusterContext:   s.Context,
+				ClusterServer:    s.Server,
 				ManagerInstallId: s.GetManagerInstallId(c),
 			}
 		}

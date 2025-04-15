@@ -2,7 +2,8 @@ package logging
 
 import (
 	"context"
-	"os"
+	"errors"
+	"io/fs"
 	"time"
 
 	"github.com/telepresenceio/telepresence/v2/pkg/client/cache"
@@ -27,7 +28,7 @@ func LoadTimedLevelFromCache(ctx context.Context, tl log.TimedLevel, procName st
 	file := procName + ".loglevel"
 	cd := cachedTLData{}
 	if err := cache.LoadFromUserCache(ctx, &cd, file); err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, fs.ErrNotExist) {
 			err = nil
 		}
 		return err

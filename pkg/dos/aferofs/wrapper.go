@@ -98,7 +98,7 @@ func (a file) ReadDir(count int) ([]fs.DirEntry, error) {
 	if d, ok := a.File.(fs.ReadDirFile); ok {
 		return d.ReadDir(count)
 	}
-	fis, err := a.File.Readdir(count) //nolint:forbidigo // this is not an os.File
+	fis, err := a.Readdir(count) //nolint:forbidigo // this is not an os.File
 	if err != nil {
 		return nil, err
 	}

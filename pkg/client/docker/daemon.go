@@ -4,7 +4,9 @@ package docker
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"io/fs"
 	"net"
 	"net/netip"
 	"net/url"
@@ -182,7 +184,7 @@ func startAuthenticatorService(ctx context.Context, portFile string, kubeFlags m
 		dtime.SleepWithContext(ctx, 10*time.Millisecond)
 		port, err := readPortFile(ctx, portFile, configFiles)
 		if err != nil {
-			if !os.IsNotExist(err) {
+			if !errors.Is(err, fs.ErrNotExist) {
 				return 0, err
 			}
 			continue
@@ -196,7 +198,7 @@ func ensureAuthenticatorService(ctx context.Context, kubeFlags map[string]string
 	portFile := filepath.Join(filelocation.AppUserCacheDir(ctx), kubeAuthPortFile)
 	st, err := os.Stat(portFile)
 	if err != nil {
-		if !os.IsNotExist(err) {
+		if !errors.Is(err, fs.ErrNotExist) {
 			return 0, err
 		}
 	} else if st.ModTime().Add(kubeauth.PortFileStaleTime).After(time.Now()) {
@@ -205,7 +207,7 @@ func ensureAuthenticatorService(ctx context.Context, kubeFlags map[string]string
 			dlog.Debug(ctx, "kubeauth service found alive and valid")
 			return port, nil
 		}
-		if !os.IsNotExist(err) {
+		if !errors.Is(err, fs.ErrNotExist) {
 			return 0, err
 		}
 	}

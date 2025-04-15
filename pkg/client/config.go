@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"math"
 	"net/netip"
 	"os"
@@ -895,7 +896,7 @@ func (r *Routing) merge(o *Routing) {
 	if o.VirtualSubnet != defaultVirtualSubnet {
 		r.VirtualSubnet = o.VirtualSubnet
 	}
-	if o.AutoResolveConflicts != defaultAutoResolveConflicts { //nolint:gosimple // keep for the semantic clarity
+	if o.AutoResolveConflicts != defaultAutoResolveConflicts { //nolint:staticcheck // keep for the semantic clarity
 		r.AutoResolveConflicts = o.AutoResolveConflicts
 	}
 }
@@ -1050,7 +1051,7 @@ func LoadConfig(c context.Context) (cfg Config, err error) {
 		fileName := filepath.Join(dir, ConfigFile)
 		bs, err := os.ReadFile(fileName)
 		if err != nil {
-			if os.IsNotExist(err) {
+			if errors.Is(err, fs.ErrNotExist) {
 				err = nil
 			}
 			return err

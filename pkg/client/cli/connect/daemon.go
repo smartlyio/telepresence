@@ -2,7 +2,9 @@ package connect
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -25,7 +27,7 @@ func launchDaemon(ctx context.Context, cr *daemon.Request) (err error) {
 	logDir := filelocation.AppUserLogDir(ctx)
 	logFile := filepath.Join(logDir, "daemon.log")
 	if _, err = os.Stat(logFile); err != nil {
-		if !os.IsNotExist(err) {
+		if !errors.Is(err, fs.ErrNotExist) {
 			return err
 		}
 		if err = os.MkdirAll(logDir, 0o700); err != nil {

@@ -24,7 +24,7 @@ func (a *Assertions) Equal(expected any, actual any, msgAndArgs ...any) bool {
 	_, actualIsProto := actual.(proto.Message)
 	if expectedIsProto && actualIsProto {
 		if diff := cmp.Diff(expected, actual, cmp.Comparer(proto.Equal)); diff != "" {
-			return a.Assertions.Fail("Not equal (-expected +actual):\n"+diff, msgAndArgs...)
+			return a.Fail("Not equal (-expected +actual):\n"+diff, msgAndArgs...)
 		}
 
 		return true
@@ -37,10 +37,10 @@ func (a *Assertions) Contains(s, contains any, msgAndArgs ...any) bool {
 	if contains, isProto := contains.(proto.Message); isProto {
 		ok, found := includeElement(s, contains)
 		if !ok {
-			return a.Assertions.Fail(fmt.Sprintf("%#v could not be applied builtin len()", s), msgAndArgs...)
+			return a.Fail(fmt.Sprintf("%#v could not be applied builtin len()", s), msgAndArgs...)
 		}
 		if !found {
-			return a.Assertions.Fail(fmt.Sprintf("%#v does not contain %#v", s, contains), msgAndArgs...)
+			return a.Fail(fmt.Sprintf("%#v does not contain %#v", s, contains), msgAndArgs...)
 		}
 		return true
 	}

@@ -2,6 +2,7 @@ package logging
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -24,7 +25,7 @@ type RotationStrategy interface {
 
 type rotateNever int
 
-// The RotateNever strategy will always answer false to the RotateNow question.
+// RotateNever strategy will always answer false to the RotateNow question.
 const RotateNever = rotateNever(0)
 
 func (rotateNever) RotateNow(_ *RotatingFile, _ int) bool {
@@ -51,7 +52,7 @@ func (r *rotateOnce) RotateNow(rf *RotatingFile, _ int) bool {
 
 type rotateDaily int
 
-// The RotateDaily strategy will ensure that the file is rotated if it is of non-zero size when a call
+// RotateDaily strategy will ensure that the file is rotated if it is of non-zero size when a call
 // to Write() arrives on a day different from the day when the current file was created.
 const RotateDaily = rotateDaily(0)
 
@@ -136,7 +137,7 @@ func OpenRotatingFile(
 
 	// Try to open existing file for append.
 	if rf.file, err = dos.OpenFile(ctx, logfilePath, os.O_WRONLY|os.O_APPEND, rf.fileMode); err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, fs.ErrNotExist) {
 			// There is no existing file, go ahead and create a new one.
 			if err = rf.openNew(nil, ""); err == nil {
 				return rf, nil

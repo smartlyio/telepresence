@@ -258,8 +258,8 @@ func genConfigMapSubCommand(yamlInfo *genYAMLCommand) *cobra.Command {
 	return cmd
 }
 
-func (i *genConfigMap) generateConfigMap(ctx context.Context, wl k8sapi.Workload) (*agentconfig.Sidecar, error) {
-	ac, err := i.BasicGeneratorConfig.Generate(ctx, wl, nil)
+func (g *genConfigMap) generateConfigMap(ctx context.Context, wl k8sapi.Workload) (*agentconfig.Sidecar, error) {
+	ac, err := g.Generate(ctx, wl, nil)
 	if err != nil {
 		return nil, errcat.NoDaemonLogs.New(err)
 	}

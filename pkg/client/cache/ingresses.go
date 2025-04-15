@@ -2,7 +2,8 @@ package cache
 
 import (
 	"context"
-	"os"
+	"errors"
+	"io/fs"
 
 	"github.com/telepresenceio/telepresence/rpc/v2/manager"
 )
@@ -24,7 +25,7 @@ func LoadIngressesFromUserCache(ctx context.Context) (map[string]*manager.Ingres
 	var ingresses map[string]*manager.IngressInfo
 	err := LoadFromUserCache(ctx, &ingresses, ingressesFile)
 	if err != nil {
-		if !os.IsNotExist(err) {
+		if !errors.Is(err, fs.ErrNotExist) {
 			return nil, err
 		}
 		return make(map[string]*manager.IngressInfo), nil

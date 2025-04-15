@@ -104,7 +104,7 @@ func LoadInfos(ctx context.Context) ([]*Info, error) {
 func infoFiles(ctx context.Context) ([]fs.DirEntry, error) {
 	files, err := os.ReadDir(filepath.Join(filelocation.AppUserCacheDir(ctx), daemonsDirName))
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, fs.ErrNotExist) {
 			err = nil
 		}
 		return nil, err
@@ -227,7 +227,7 @@ func KeepInfoAlive(ctx context.Context, file string) error {
 	now := time.Now()
 	for {
 		if err := os.Chtimes(daemonFile, now, now); err != nil {
-			if os.IsNotExist(err) {
+			if errors.Is(err, fs.ErrNotExist) {
 				// File is removed, so stop trying to update its timestamps
 				dlog.Debugf(ctx, "Daemon info %s does not exist", file)
 				return nil

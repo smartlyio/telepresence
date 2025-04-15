@@ -79,7 +79,7 @@ func getPod(req *admission.AdmissionRequest, isDelete bool) (*core.Pod, error) {
 	if podName == "" {
 		// It is very probable the pod was not yet assigned a name,
 		// in which case we should use the metadata generated name.
-		pod.Name = pod.ObjectMeta.GenerateName
+		pod.Name = pod.GenerateName
 	}
 
 	// Validate traffic-agent injection preconditions.
@@ -318,8 +318,8 @@ func compareProbes(a, b *core.Probe) bool {
 	if a == nil || b == nil {
 		return a == b
 	}
-	ae := a.ProbeHandler.Exec
-	be := b.ProbeHandler.Exec
+	ae := a.Exec
+	be := b.Exec
 	if ae == nil || be == nil {
 		return ae == be
 	}

@@ -323,7 +323,7 @@ func (s *state) runCommand(ctx context.Context) error {
 		Mount:         s.info.Mount,
 	}
 	if s.dockerPort != 0 {
-		dr.Flags.PublishedPorts = append(dr.Flags.PublishedPorts, cliDocker.PublishedPort{
+		dr.PublishedPorts = append(dr.PublishedPorts, cliDocker.PublishedPort{
 			HostAddrPort:  netip.AddrPortFrom(netip.IPv4Unspecified(), s.localPort),
 			Protocol:      "tcp",
 			ContainerPort: s.dockerPort,
