@@ -265,3 +265,16 @@ func (d *device) removeAddr(subnet netip.Prefix, to netip.Addr) error {
 		})
 	}
 }
+
+func withSocket(domain int, f func(fd int) error) error {
+	fd, err := unix.Socket(domain, unix.SOCK_DGRAM, 0)
+	if err != nil {
+		return err
+	}
+	defer unix.Close(fd)
+	return f(fd)
+}
+
+func ioctl(socket int, request uint, requestData unsafe.Pointer) error {
+	return unix.IoctlSetInt(socket, request, int(uintptr(requestData)))
+}

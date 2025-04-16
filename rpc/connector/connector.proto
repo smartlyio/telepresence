@@ -365,11 +365,11 @@ message WorkloadInfo {
   // Reason why workload cannot be intercepted, or empty if it can.
   string not_interceptable_reason = 3;
 
-  // InterceptInfos reported from the traffic manager in case the workload is currently intercepted
-  repeated manager.InterceptInfo intercept_infos = 4;
+  // InterceptInfo reported from the traffic manager in case the workload is currently intercepted
+  repeated manager.InterceptInfo intercept_info = 4;
 
-  // InterceptInfos reported from the traffic manager in case the workload is currently intercepted
-  repeated IngestInfo ingest_infos = 5;
+  // IngestInfo reported from the traffic manager in case the workload is currently intercepted
+  repeated IngestInfo ingest_info = 5;
 
   // Workload Resource type (e.g. Deployment, ReplicaSet, StatefulSet, Rollout)
   string workload_resource_type = 6;

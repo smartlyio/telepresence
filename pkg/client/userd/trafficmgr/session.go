@@ -617,11 +617,11 @@ func (s *session) getInfosForWorkloads(
 					include = filter&rpc.ListRequest_INTERCEPTS != 0
 				}
 				if include || filter == 0 {
-					wlInfo.InterceptInfos = append(wlInfo.InterceptInfos, ii)
+					wlInfo.InterceptInfo = append(wlInfo.InterceptInfo, ii)
 				}
 			}
 		}
-		if wlInfo.IngestInfos, ok = gMap[name]; !ok {
+		if wlInfo.IngestInfo, ok = gMap[name]; !ok {
 			filterMatch &= ^rpc.ListRequest_INGESTS
 		}
 		if wlInfo.AgentVersion, ok = sMap[name]; !ok {

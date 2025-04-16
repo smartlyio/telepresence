@@ -31,7 +31,7 @@ bindir ?= $(or $(shell go env GOBIN),$(shell go env GOPATH|cut -d: -f1)/bin)
 # https://github.com/moby/buildkit/blob/master/frontend/dockerfile/docs/syntax.md.
 export DOCKER_BUILDKIT := 1
 
-GOLANGCI_VERSION:=v1.64.7
+GOLANGCI_VERSION:=v1.64.8
 
 .PHONY: FORCE
 FORCE:
