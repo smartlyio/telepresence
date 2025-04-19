@@ -1,6 +1,7 @@
 package integration_test
 
 import (
+	"bytes"
 	"context"
 	"os"
 	"path/filepath"
@@ -16,6 +17,7 @@ import (
 	"github.com/datawire/dlib/dlog"
 	"github.com/telepresenceio/telepresence/v2/integration_test/itest"
 	"github.com/telepresenceio/telepresence/v2/pkg/client/cli/daemon"
+	"github.com/telepresenceio/telepresence/v2/pkg/dos"
 	"github.com/telepresenceio/telepresence/v2/pkg/filelocation"
 	"github.com/telepresenceio/telepresence/v2/pkg/ioutil"
 	"github.com/telepresenceio/telepresence/v2/pkg/labels"
@@ -79,6 +81,11 @@ func (s *multiConnectSuite) SetupSuite() {
 	ctx2 := itest.WithNamespaces(ctx, &itest.Namespaces{Namespace: s.mgrSpace2, Selector: labels.SelectorFromNames(s.appSpace2)})
 	err := itest.Kubectl(ctx2, s.mgrSpace2, "apply", "-f", filepath.Join(itest.GetOSSRoot(ctx2), "testdata", "k8s", "client_sa.yaml"))
 	require.NoError(err, "failed to create connect ServiceAccount")
+	db, err := itest.ReadTemplate(ctx, filepath.Join("testdata", "k8s", "client_rancher.goyaml"), map[string]string{
+		"ManagerNamespace": s.mgrSpace2,
+	})
+	require.NoError(err)
+	require.NoError(err, itest.Kubectl(dos.WithStdin(ctx, bytes.NewReader(db)), s.mgrSpace2, "apply", "-f", "-"))
 
 	ctx2 = itest.WithUser(ctx2, s.mgrSpace2+":"+itest.TestUser)
 	s.TelepresenceHelmInstallOK(ctx2, false)
@@ -180,13 +187,23 @@ func (s *multiConnectSuite) doubleConnectCheck(ctx1, ctx2 context.Context, n1, n
 	defer cancel2()
 
 	wg := sync.WaitGroup{}
-	runDockerRun := func(ctx context.Context, use, svc string) {
+	runDockerRun := func(ctx context.Context, use, svc string, cancel context.CancelFunc) {
 		defer wg.Done()
-		_, _, _ = itest.Telepresence(ctx, "intercept", "--use", use, "--mount", "false", svc, "--docker-run", "--port", "8080", "--", "--rm", "--name", use+"-app", s.handlerTag)
+		defer cancel()
+		so, se, err := itest.Telepresence(ctx, "intercept", "--use", use, "--mount", "false", svc, "--docker-run", "--port", "8080", "--", "--rm", "--name", use+"-app", s.handlerTag)
+		if err != nil {
+			dlog.Errorf(ctx, "intercept %s ended with error: %v", svc, err)
+		}
+		if so != "" {
+			dlog.Infof(ctx, "intercept %s stdout: %s", svc, so)
+		}
+		if se != "" {
+			dlog.Infof(ctx, "intercept %s stderr: %s", svc, se)
+		}
 	}
 
 	assertInterceptResponse := func(ctx context.Context, cn, svc string) {
-		s.Eventually(func() bool {
+		s.Assert().EventuallyContext(ctx, func() bool {
 			stdout, _, err := itest.Telepresence(ctx, "list", "--use", cn, "--intercepts")
 			if err == nil {
 				if strings.Contains(stdout, svc+": intercepted") {
@@ -201,7 +218,7 @@ func (s *multiConnectSuite) doubleConnectCheck(ctx1, ctx2 context.Context, n1, n
 
 		// Response contains env variables TELEPRESENCE_CONTAINER and TELEPRESENCE_INTERCEPT_ID
 		expectedOutput := regexp.MustCompile(`Intercept id [0-9a-f-]+:` + svc)
-		s.Eventually(
+		s.Assert().EventuallyContext(ctx,
 			// condition
 			func() bool {
 				ot, et, err := itest.Telepresence(ctx, "--use", cn, "curl", "--silent", "--max-time", "2", svc)
@@ -219,7 +236,7 @@ func (s *multiConnectSuite) doubleConnectCheck(ctx1, ctx2 context.Context, n1, n
 	}
 
 	assertNotIntercepted := func(ctx context.Context, use, svc string) {
-		s.Eventually(func() bool {
+		s.Assert().EventuallyContext(ctx, func() bool {
 			stdout, _, err := itest.Telepresence(ctx, "list", "--use", use, "--intercepts")
 			return err == nil && !strings.Contains(stdout, svc+": intercepted")
 		}, 10*time.Second, 2*time.Second)
@@ -230,19 +247,24 @@ func (s *multiConnectSuite) doubleConnectCheck(ctx1, ctx2 context.Context, n1, n
 		svc2 = svc1
 	}
 	wg.Add(2)
-	go runDockerRun(ctx1, n1, svc1)
-	go runDockerRun(ctx2, n2, svc2)
+	ixCtx1, ixCancel1 := context.WithCancel(ctx1)
+	defer ixCancel1()
+	go runDockerRun(ctx1, n1, svc1, ixCancel1)
 
-	assertInterceptResponse(ctx1, name1, svc1)
-	assertInterceptResponse(ctx2, name2, svc2)
+	ixCtx2, ixCancel2 := context.WithCancel(ctx2)
+	defer ixCancel2()
+	go runDockerRun(ctx2, n2, svc2, ixCancel2)
 
-	itest.TelepresenceOk(ctx1, "leave", "--use", n1, svc1)
+	assertInterceptResponse(ixCtx1, name1, svc1)
+	assertInterceptResponse(ixCtx2, name2, svc2)
+
+	itest.TelepresenceOk(ixCtx1, "leave", "--use", n1, svc1)
 	assertNotIntercepted(ctx1, n1, svc1)
 
 	// Other connection's intercept is still alive and kicking.
-	assertInterceptResponse(ctx2, name2, svc2)
+	assertInterceptResponse(ixCtx2, name2, svc2)
 
-	itest.TelepresenceOk(ctx2, "leave", "--use", n2, svc2)
+	itest.TelepresenceOk(ixCtx2, "leave", "--use", n2, svc2)
 	assertNotIntercepted(ctx2, n2, svc2)
 
 	cancel1()

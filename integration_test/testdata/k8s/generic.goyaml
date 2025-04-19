@@ -49,6 +49,10 @@ spec:
   {{- toYaml . | nindent 8 }}
 {{- end}}
     spec:
+{{- with .Volumes }}
+      volumes:
+  {{- toYaml . | nindent 8 }}
+{{- end}}
       containers:
         - name: backend
 {{- if .Registry }}
@@ -69,6 +73,10 @@ spec:
 {{- else }}
             - containerPort: {{ .ContainerPort | default 8080 }}
               name: http
+{{- end }}
+{{- with .VolumeMounts }}
+          volumeMounts:
+  {{- toYaml . | nindent 10 }}
 {{- end }}
 {{- with .Environment }}
           env:

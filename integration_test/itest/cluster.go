@@ -99,6 +99,10 @@ type Cluster interface {
 	// ManagerIsVersion returns true if the final version of the ManagerVersion is included
 	// in the given version range.
 	ManagerIsVersion(versionRange string) bool
+
+	// UseRancherLocalPath returns true if the rancher-local-path provisioner is used.
+	// See: https://github.com/rancher/local-path-provisioner
+	UseLocalPathProvisioner() bool
 }
 
 // The cluster is created once and then reused by all tests. It ensures that:
@@ -128,9 +132,10 @@ type cluster struct {
 	clientRegistry  string
 	managerRegistry string
 
-	agentVersion   semver.Version
-	clientVersion  semver.Version
-	managerVersion semver.Version
+	agentVersion         semver.Version
+	clientVersion        semver.Version
+	managerVersion       semver.Version
+	localPathProvisioner bool
 }
 
 //nolint:gochecknoglobals // extension point
@@ -272,6 +277,9 @@ func (s *cluster) Initialize(ctx context.Context) context.Context {
 		port, err := strconv.ParseUint(pp, 10, 16)
 		require.NoError(t, err)
 		s.rootdPProf = uint16(port)
+	}
+	if pp := dos.Getenv(ctx, "DEV_LOCAL_PATH_PROVISIONER"); pp != "" {
+		s.localPathProvisioner, _ = strconv.ParseBool(pp)
 	}
 
 	exe := "telepresence"
@@ -592,6 +600,10 @@ func (s *cluster) UserdPProf() uint16 {
 
 func (s *cluster) RootdPProf() uint16 {
 	return s.rootdPProf
+}
+
+func (s *cluster) UseLocalPathProvisioner() bool {
+	return s.localPathProvisioner
 }
 
 func (s *cluster) CapturePodLogs(ctx context.Context, app, container, ns string) string {

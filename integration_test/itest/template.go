@@ -11,7 +11,14 @@ import (
 	"github.com/Masterminds/sprig/v3"
 	core "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
+
+	"github.com/telepresenceio/telepresence/v2/pkg/dos"
 )
+
+type TplResource interface {
+	Apply(context context.Context, namespace string) error
+	Delete(ctx context.Context) error
+}
 
 type ContainerPort struct {
 	Number   int
@@ -26,7 +33,27 @@ type ServicePort struct {
 	TargetPort string
 }
 
+type tplBase struct {
+	yml []byte
+	ns  string
+}
+
+func (b *tplBase) loadAndApply(ctx context.Context, path, ns string, data any) error {
+	yml, err := ReadTemplate(ctx, filepath.Join("testdata", "k8s", path+".goyaml"), data)
+	if err == nil {
+		b.yml = yml
+		b.ns = ns
+		err = Kubectl(dos.WithStdin(ctx, bytes.NewReader(b.yml)), b.ns, "apply", "-f", "-")
+	}
+	return err
+}
+
+func (b *tplBase) Delete(ctx context.Context) error {
+	return Kubectl(dos.WithStdin(ctx, bytes.NewReader(b.yml)), b.ns, "delete", "-f", "-")
+}
+
 type Generic struct {
+	tplBase
 	Name           string
 	Annotations    map[string]string
 	Labels         map[string]string
@@ -38,14 +65,34 @@ type Generic struct {
 	Image          string
 	Registry       string
 	ServiceAccount string
+	Volumes        []core.Volume
+	VolumeMounts   []core.VolumeMount
+}
+
+func (g *Generic) Apply(ctx context.Context, ns string) error {
+	return g.loadAndApply(ctx, "generic", ns, g)
 }
 
 type PersistentVolume struct {
-	// Deployment and service name
-	Name string
+	tplBase
+	Name             string
+	Annotations      map[string]string
+	StorageClassName string
+}
 
-	// MountDirectory in the pod
-	MountDirectory string
+func (p *PersistentVolume) Apply(ctx context.Context, ns string) error {
+	return p.loadAndApply(ctx, "pv", ns, p)
+}
+
+type PersistentVolumeClaim struct {
+	tplBase
+	Name             string
+	Annotations      map[string]string
+	StorageClassName string
+}
+
+func (r *PersistentVolumeClaim) Apply(ctx context.Context, ns string) error {
+	return r.loadAndApply(ctx, "pvc", ns, r)
 }
 
 type DisruptionBudget struct {

@@ -2,7 +2,6 @@ package integration_test
 
 import (
 	"bufio"
-	"bytes"
 	"context"
 	"encoding/binary"
 	"errors"
@@ -15,12 +14,12 @@ import (
 	"time"
 
 	"github.com/go-json-experiment/json"
+	core "k8s.io/api/core/v1"
 
 	"github.com/datawire/dlib/dtime"
 	"github.com/telepresenceio/telepresence/v2/integration_test/itest"
 	"github.com/telepresenceio/telepresence/v2/pkg/client"
 	"github.com/telepresenceio/telepresence/v2/pkg/client/cli/intercept"
-	"github.com/telepresenceio/telepresence/v2/pkg/dos"
 	"github.com/telepresenceio/telepresence/v2/pkg/ioutil"
 )
 
@@ -28,7 +27,7 @@ type largeFilesSuite struct {
 	itest.Suite
 	itest.TrafficManager
 	name         string
-	manifests    [][]byte
+	manifests    [][3]itest.TplResource
 	serviceCount int
 	mountPoint   []string
 	largeFiles   []string
@@ -71,41 +70,80 @@ func (s *largeFilesSuite) SetupSuite() {
 	}
 	s.Suite.SetupSuite()
 	ctx := s.Context()
+
+	s.manifests = make([][3]itest.TplResource, s.ServiceCount())
 	wg := sync.WaitGroup{}
 	wg.Add(s.ServiceCount())
-	mfPath := filepath.Join("testdata", "k8s", "hello-pv-volume.goyaml")
-	s.NoError(s.Kubectl(ctx, "apply", "-f", filepath.Join("testdata", "k8s", "local-pvc.yaml")))
-	s.manifests = make([][]byte, s.ServiceCount())
 	for i := 0; i < s.ServiceCount(); i++ {
-		go func(i int) {
+		go func() {
 			defer wg.Done()
+			pvName := fmt.Sprintf("%s-pv-%d", s.Name(), i)
+			pv := &itest.PersistentVolume{
+				Name: pvName,
+			}
+			if s.UseLocalPathProvisioner() {
+				pv.Annotations = map[string]string{
+					"pv.kubernetes.io/provisioned-by": "rancher.io/local-path",
+				}
+				pv.StorageClassName = "local-path"
+			}
+			s.NoError(pv.Apply(ctx, s.AppNamespace()))
+
+			pvcName := fmt.Sprintf("%s-pvc-%d", s.Name(), i)
+			pvc := &itest.PersistentVolumeClaim{
+				Name: pvcName,
+			}
+			if s.UseLocalPathProvisioner() {
+				pvc.Annotations = map[string]string{
+					"pv.kubernetes.io/provisioned-by": "rancher.io/local-path",
+				}
+				pvc.StorageClassName = "local-path"
+			}
+			s.NoError(pvc.Apply(ctx, s.AppNamespace()))
+
 			svc := fmt.Sprintf("%s-%d", s.Name(), i)
-			mf, err := itest.ReadTemplate(ctx, mfPath, &itest.PersistentVolume{
-				Name:           svc,
-				MountDirectory: "/home/scratch",
-			})
-			s.NoError(err)
-			s.NoError(s.Kubectl(dos.WithStdin(ctx, bytes.NewReader(mf)), "apply", "-f", "-"))
-			s.manifests[i] = mf
+			dep := &itest.Generic{
+				Name:     svc,
+				Registry: "ghcr.io/telepresenceio",
+				Image:    "echo-server:latest",
+				Volumes: []core.Volume{
+					{
+						Name: "rw-volume",
+						VolumeSource: core.VolumeSource{
+							PersistentVolumeClaim: &core.PersistentVolumeClaimVolumeSource{ClaimName: pvc.Name},
+						},
+					},
+				},
+				VolumeMounts: []core.VolumeMount{
+					{
+						Name:      "rw-volume",
+						MountPath: "/home/scratch",
+					},
+				},
+			}
+			s.NoError(dep.Apply(ctx, s.AppNamespace()))
 			s.NoError(itest.RolloutStatusWait(ctx, s.AppNamespace(), "deploy/"+svc))
-		}(i)
+			s.manifests[i] = [3]itest.TplResource{dep, pvc, pv}
+		}()
 	}
 	wg.Wait()
 }
 
 func (s *largeFilesSuite) TearDownSuite() {
 	ctx := s.Context()
+	// Delete in reverse order
 	wg := sync.WaitGroup{}
 	wg.Add(s.ServiceCount())
-	for i := 0; i < s.ServiceCount(); i++ {
-		go func(i int) {
+	for _, trs := range s.manifests {
+		go func() {
 			defer wg.Done()
-			s.NoError(s.Kubectl(dos.WithStdin(ctx, bytes.NewReader(s.manifests[i])), "delete", "-f", "-"))
-		}(i)
+			for _, tr := range trs {
+				s.NoError(tr.Delete(ctx))
+			}
+		}()
 	}
-	s.NoError(s.Kubectl(ctx, "delete", "-f", filepath.Join("testdata", "k8s", "local-pvc.yaml")))
-	itest.TelepresenceQuitOk(ctx)
 	wg.Wait()
+	itest.TelepresenceQuitOk(ctx)
 }
 
 func (s *largeFilesSuite) createIntercepts(ctx context.Context) {
@@ -160,6 +198,10 @@ func (s *largeFilesSuite) Test_LargeFileIntercepts_sshfs() {
 }
 
 func (s *largeFilesSuite) largeFileIntercepts(ctx context.Context) {
+	ctx = itest.WithConfig(ctx, func(config client.Config) {
+		config.Routing().RecursionBlockDuration = 0
+	})
+
 	s.createIntercepts(ctx)
 	wg := sync.WaitGroup{}
 
