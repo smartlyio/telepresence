@@ -388,13 +388,17 @@ func (s *cluster) ensureNoManager(ctx context.Context) {
 	var es []map[string]any
 	err = json.Unmarshal([]byte(out), &es)
 	require.NoError(t, err)
-	ix := slices.IndexFunc(es, func(v map[string]any) bool {
-		return v["name"] == "traffic-manager"
-	})
-	if ix >= 0 {
+	for {
+		ix := slices.IndexFunc(es, func(v map[string]any) bool {
+			return v["name"] == "traffic-manager"
+		})
+		if ix < 0 {
+			break
+		}
 		e := es[ix]
+		es = slices.Delete(es, ix, ix+1)
 		ns := e["namespace"].(string)
-		if regexp.MustCompile(`^ambassador-[0-9a-f]+$`).MatchString(ns) {
+		if regexp.MustCompile(`^ambassador-[0-9a-f]+(-[0-9])?$`).MatchString(ns) {
 			s.UninstallTrafficManager(ctx, ns)
 		} else {
 			t.Fatalf("%s is already installed in namespace %s. Please uninstall before testing.", e["chart"], ns)
