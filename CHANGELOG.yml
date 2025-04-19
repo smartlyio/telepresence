@@ -46,6 +46,19 @@ items:
           A new global `--progress <progress>` flag was added. It defaults to "auto" which means that the style is
           chosen depending on whether the command runs from a tty type terminal. Other possible values are "plain",
           "quiet", and "json". `--progress quiet` is implied when formatted output is chosen using `--output json|yaml`.
+      - type: change
+        title: Dropped support for Telepresence legacy flags
+        body: |-
+          The `telepresence` CLI command will no longer support legacy flags such as:
+
+          - `--swap-deployment`
+          - `--new-deployment`
+          - `--docker-mount`
+          - `--method`
+
+          A "Legacy Telepresence command used" warning has been printed for several years now, and the mapping for the
+          `--swap-deployment` was the `intercept` command, which is very confusing today since we now have the `replace`
+          command.
   - version: 2.22.3
     date: 2025-04-08
     notes:

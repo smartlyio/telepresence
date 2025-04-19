@@ -22,6 +22,21 @@ Telepresence now uses a progress reporter that is very similar to the one used b
 A new global `--progress <progress>` flag was added. It defaults to "auto" which means that the style is chosen depending on whether the command runs from a tty type terminal. Other possible values are "plain", "quiet", and "json". `--progress quiet` is implied when formatted output is chosen using `--output json|yaml`.
   </Body>
 </Note>
+<Note>
+	<Title type="change">Dropped support for Telepresence legacy flags</Title>
+	<Body>
+The `telepresence` CLI command will no longer support legacy flags such as:
+
+- `--swap-deployment`
+- `--new-deployment`
+- `--docker-mount`
+- `--method`
+
+A "Legacy Telepresence command used" warning has been printed for several years now, and the mapping for the
+`--swap-deployment` was the `intercept` command, which is very confusing today since we now have the `replace`
+command.
+  </Body>
+</Note>
 ## Version 2.22.3 <span style={{fontSize:'16px'}}>(April  8)</span>
 <Note>
 	<Title type="change">The Windows install script will now install Telepresence to "%ProgramFiles%\telepresence"</Title>

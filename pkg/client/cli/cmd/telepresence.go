@@ -34,15 +34,14 @@ func Telepresence(ctx context.Context) *cobra.Command {
 	}
 	rootCmd := &cobra.Command{
 		Use:  "telepresence",
-		Args: perhapsLegacy,
+		Args: OnlySubcommands,
 
-		Short:              "Connect your workstation to a Kubernetes cluster",
-		Long:               help,
-		RunE:               RunSubcommands,
-		SilenceErrors:      true, // main() will handle it after .ExecuteContext() returns
-		SilenceUsage:       true, // our FlagErrorFunc will handle it
-		DisableFlagParsing: true, // Bc of the legacyCommand parsing, see legacy_command.go
-		ValidArgsFunction:  cobra.NoFileCompletions,
+		Short:             "Connect your workstation to a Kubernetes cluster",
+		Long:              help,
+		RunE:              RunSubcommands,
+		SilenceErrors:     true, // main() will handle it after .ExecuteContext() returns
+		SilenceUsage:      true, // our FlagErrorFunc will handle it
+		ValidArgsFunction: cobra.NoFileCompletions,
 	}
 	rootCmd.SetContext(ctx)
 	AddSubCommands(rootCmd)
@@ -107,9 +106,6 @@ func RunSubcommands(cmd *cobra.Command, args []string) error {
 	if len(args) == 0 || usedHelpFlag {
 		cmd.HelpFunc()(cmd, args)
 		return nil
-	}
-	if err := checkLegacy(cmd, args); err != nil {
-		return err
 	}
 	return nil
 }
