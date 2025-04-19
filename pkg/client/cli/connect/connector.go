@@ -95,7 +95,9 @@ func quitDockerDaemons(ctx context.Context) {
 		progress.Write(ctx, progress.WorkingEvent(id, "Quitting"))
 		udCtx, err := ExistingDaemon(ctx, info)
 		if err != nil {
-			progress.Write(ctx, progress.ErrorMessageEvent(id, err.Error()))
+			if !errors.Is(err, fs.ErrNotExist) {
+				progress.Write(ctx, progress.ErrorMessageEvent(id, err.Error()))
+			}
 			continue
 		}
 		ud := daemon.GetUserClient(udCtx)
@@ -449,7 +451,11 @@ func connectResult(ctx context.Context, ci *connector.ConnectInfo, withProgress 
 	case connector.ConnectInfo_ALREADY_CONNECTED:
 		if withProgress {
 			msg := fmt.Sprintf("Connected to context %s, namespace %s (%s)", ci.ClusterContext, ci.Namespace, ci.ClusterServer)
-			progress.Write(ctx, progress.DoneEvent(ci.ConnectionName, msg).Info())
+			ev := progress.DoneEvent(ci.ConnectionName, msg)
+			if ci.Error == connector.ConnectInfo_UNSPECIFIED {
+				ev = ev.Info()
+			}
+			progress.Write(ctx, ev)
 		}
 		return &daemon.Session{Info: ci, Started: started}, nil
 	case connector.ConnectInfo_MUST_RESTART:
