@@ -799,6 +799,9 @@ type Cluster struct {
 
 	// deprecated, use Routing.VirtualSubnet
 	OldVirtualIPSubnet string `json:"virtualIPSubnet"`
+
+	// If set, add flag "--add-host=host.docker.internal:host-gateway" when starting the containerized daemon container
+	DockerAddHostGateway bool `json:"dockerAddHostGateway"`
 }
 
 // This is used by a different config -- the k8s_config, which needs to be able to tell if it's overridden at a cluster or environment variable level.
@@ -809,6 +812,7 @@ var defaultCluster = Cluster{ //nolint:gochecknoglobals // constant
 	DefaultManagerNamespace: defaultDefaultManagerNamespace,
 	ConnectFromRootDaemon:   true,
 	AgentPortForward:        true,
+	DockerAddHostGateway:    defaultDockerAddHostGateway,
 }
 
 func (cc *Cluster) defaults() DefaultsAware {

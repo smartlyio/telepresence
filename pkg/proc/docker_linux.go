@@ -38,6 +38,5 @@ func AppendOSSpecificContainerOpts(ctx context.Context, opts []string) ([]string
 		}
 		opts = append(opts, "-e", fmt.Sprintf("TELEPRESENCE_KUBEAUTH_HOST=%s", r.LocalIP))
 	}
-	opts = append(opts, "--add-host", "host.docker.internal:host-gateway")
 	return opts, nil
 }

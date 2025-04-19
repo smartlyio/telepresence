@@ -2,7 +2,9 @@ package mount
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 
 	"github.com/telepresenceio/telepresence/v2/pkg/errcat"
@@ -15,7 +17,7 @@ func prepare(_ context.Context, _ string, mountPoint string) (string, error) {
 		// A and B aren't often used nowadays. No floppy-disks.
 		for _, c := range "TUVXYZABEFGHIJKLMNOPQR" {
 			_, err = os.Stat(fmt.Sprintf(`%c:\`, c))
-			if os.IsNotExist(err) {
+			if errors.Is(err, fs.ErrNotExist) {
 				return fmt.Sprintf(`%c:`, c), nil
 			}
 		}

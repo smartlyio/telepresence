@@ -23,6 +23,13 @@ The new `intercept.mountsRoot` can be set to a directory that will be used as th
 The setting is not used on windows, where the mounts use drive letters.
 </div>
 
+## <div style="display:flex;"><img src="images/feature.png" alt="feature" style="width:30px;height:fit-content;"/><div style="display:flex;margin-left:7px;">Add cluster.dockerAddHostGateway to the client configuration.</div></div>
+<div style="margin-left: 15px">
+
+When `cluster.dockerAddHostGateway` is set to `true`, the `docker run` that starts the containerized Telepresence daemon will include the flag `--add-host host.docker.internal:host-gateway`.
+The flag is set to `true` by default on linux platforms and `false` on other platforms.
+</div>
+
 ## <div style="display:flex;"><img src="images/change.png" alt="change" style="width:30px;height:fit-content;"/><div style="display:flex;margin-left:7px;">Dropped support for Telepresence legacy flags</div></div>
 <div style="margin-left: 15px">
 

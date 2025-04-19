@@ -104,6 +104,9 @@ func DaemonOptions(ctx context.Context, daemonID *daemon.Identifier, aliases []s
 	if env.ScoutDisable {
 		opts = append(opts, "-e", "SCOUT_DISABLE=1")
 	}
+	if client.GetConfig(ctx).Cluster().DockerAddHostGateway {
+		opts = append(opts, "--add-host", "host.docker.internal:host-gateway")
+	}
 	return opts, addr, nil
 }
 

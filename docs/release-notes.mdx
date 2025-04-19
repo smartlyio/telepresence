@@ -30,6 +30,13 @@ The setting is not used on windows, where the mounts use drive letters.
   </Body>
 </Note>
 <Note>
+	<Title type="feature">Add cluster.dockerAddHostGateway to the client configuration.</Title>
+	<Body>
+When `cluster.dockerAddHostGateway` is set to `true`, the `docker run` that starts the containerized Telepresence daemon will include the flag `--add-host host.docker.internal:host-gateway`.
+The flag is set to `true` by default on linux platforms and `false` on other platforms.
+  </Body>
+</Note>
+<Note>
 	<Title type="change">Dropped support for Telepresence legacy flags</Title>
 	<Body>
 The `telepresence` CLI command will no longer support legacy flags such as:
