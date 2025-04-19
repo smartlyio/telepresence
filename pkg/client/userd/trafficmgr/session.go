@@ -192,7 +192,7 @@ func NewSession(
 		}
 	}()
 
-	dlog.Info(ctx, "Connecting to k8s cluster...")
+	dlog.Infof(ctx, "Connecting to k8s context %s (%s) ...", config.Context, config.Server)
 	ctx, cluster, err := k8s.ConnectCluster(ctx, cr, config)
 	if err != nil {
 		dlog.Errorf(ctx, "unable to track k8s cluster: %+v", err)
