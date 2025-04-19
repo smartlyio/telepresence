@@ -106,7 +106,7 @@ func (f *Flags) ValidateConnected(ctx context.Context) (err error) {
 	if err != nil {
 		return err
 	}
-	f.Mount, err = prepare(cwd, f.Mount)
+	f.Mount, err = prepare(ctx, cwd, f.Mount)
 	return err
 }
 

@@ -46,6 +46,13 @@ items:
           A new global `--progress <progress>` flag was added. It defaults to "auto" which means that the style is
           chosen depending on whether the command runs from a tty type terminal. Other possible values are "plain",
           "quiet", and "json". `--progress quiet` is implied when formatted output is chosen using `--output json|yaml`.
+      - type: feature
+        title: Add intercept.mountsRoot to the client configuration
+        body: >-
+          The new `intercept.mountsRoot` can be set to a directory that will be used as the root for all automatically
+          generated mount directories. The default is to use the platforms temp directory.
+          
+          The setting is not used on windows, where the mounts use drive letters.
       - type: change
         title: Dropped support for Telepresence legacy flags
         body: |-

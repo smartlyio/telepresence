@@ -16,6 +16,13 @@ Telepresence now uses a progress reporter that is very similar to the one used b
 A new global `--progress <progress>` flag was added. It defaults to "auto" which means that the style is chosen depending on whether the command runs from a tty type terminal. Other possible values are "plain", "quiet", and "json". `--progress quiet` is implied when formatted output is chosen using `--output json|yaml`.
 </div>
 
+## <div style="display:flex;"><img src="images/feature.png" alt="feature" style="width:30px;height:fit-content;"/><div style="display:flex;margin-left:7px;">Add intercept.mountsRoot to the client configuration</div></div>
+<div style="margin-left: 15px">
+
+The new `intercept.mountsRoot` can be set to a directory that will be used as the root for all automatically generated mount directories. The default is to use the platforms temp directory.
+The setting is not used on windows, where the mounts use drive letters.
+</div>
+
 ## <div style="display:flex;"><img src="images/change.png" alt="change" style="width:30px;height:fit-content;"/><div style="display:flex;margin-left:7px;">Dropped support for Telepresence legacy flags</div></div>
 <div style="margin-left: 15px">
 

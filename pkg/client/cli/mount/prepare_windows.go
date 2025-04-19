@@ -1,13 +1,14 @@
 package mount
 
 import (
+	"context"
 	"fmt"
 	"os"
 
 	"github.com/telepresenceio/telepresence/v2/pkg/errcat"
 )
 
-func prepare(_ string, mountPoint string) (string, error) {
+func prepare(_ context.Context, _ string, mountPoint string) (string, error) {
 	var err error
 	if mountPoint == "" {
 		// Find a free drive letter. Background at T, loop around and skip C and D,

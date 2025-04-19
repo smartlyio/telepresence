@@ -137,7 +137,7 @@ func RunTests(c context.Context) {
 
 // RunTests creates all suites using the added constructors and runs them.
 func (r *runner) RunTests(c context.Context) { //nolint:gocognit
-	c = LoadEnv(c)
+	c = LoadEnvAndConfig(c)
 	dtest.WithMachineLock(c, func(c context.Context) {
 		WithCluster(c, func(c context.Context) {
 			func() {

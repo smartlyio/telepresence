@@ -126,10 +126,11 @@ These are the valid fields for the `client.images` key:
 
 The `intercept` controls applies to how Telepresence will intercept the communications to replaced containers and intercepted services.
 
-| Field                 | Description                                                                                                                                    | Type                | Default      |
-|-----------------------|------------------------------------------------------------------------------------------------------------------------------------------------|---------------------|--------------|
-| `defaultPort`         | controls which port is selected when no `--port` flag is given to the `telepresence intercept` command.                                        | int                 | 8080         |
-| `useFtp`              | Use fuseftp instead of sshfs when mounting remote file systems                                                                                 | boolean             | false        |
+| Field         | Description                                                                                                           | Type    | Default    |
+|---------------|-----------------------------------------------------------------------------------------------------------------------|---------|------------|
+| `defaultPort` | controls which port is selected when no `--port` flag is given to the `telepresence intercept` command                | int     | 8080       |
+| `useFtp`      | Use fuseftp instead of sshfs when mounting remote file systems                                                        | boolean | false      |
+| `mountsRoot`  | Directory that will be used as the root for all automatically generated mount directories (not applicable on windows) | string  | env:TMPDIR |
 
 ### Log Levels
 

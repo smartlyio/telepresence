@@ -760,6 +760,7 @@ type Intercept struct {
 	DefaultPort         int                        `json:"defaultPort"`
 	UseFtp              bool                       `json:"useFtp"`
 	Telemount           Telemount                  `json:"telemount,omitzero"`
+	MountsRoot          string                     `json:"mountsRoot"`
 }
 
 func (ic *Intercept) defaults() DefaultsAware {

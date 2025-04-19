@@ -64,13 +64,17 @@ tel connect
 
 The above environment can optionally be provided in a `itest.yml` file
 that is placed adjacent to the normal `config.yml` file used to configure
-Telepresence. The `itest.yml` currently has only one single entry, the
-`Env` which is a map. It can look something like this:
+Telepresence. The `itest.yml` currently has two entries, the
+`Env` which is a map, and the `Config` which is the client config. It can look
+something like this:
 
 ```yaml
 Env:
   DEV_CLIENT_VERSION: v2.22.0-alpha.0
   DEV_KUBECONFIG: /home/thhal/.kube/testconfig
+Config:
+  cluster:
+    dockerAddHostGateway: false
 ```
 
 ## Running integration tests

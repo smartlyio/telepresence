@@ -23,6 +23,13 @@ A new global `--progress <progress>` flag was added. It defaults to "auto" which
   </Body>
 </Note>
 <Note>
+	<Title type="feature">Add intercept.mountsRoot to the client configuration</Title>
+	<Body>
+The new `intercept.mountsRoot` can be set to a directory that will be used as the root for all automatically generated mount directories. The default is to use the platforms temp directory.
+The setting is not used on windows, where the mounts use drive letters.
+  </Body>
+</Note>
+<Note>
 	<Title type="change">Dropped support for Telepresence legacy flags</Title>
 	<Body>
 The `telepresence` CLI command will no longer support legacy flags such as:
