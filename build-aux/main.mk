@@ -136,7 +136,7 @@ CHANGELOG.yml: FORCE
 		git add CHANGELOG.yml; \
 	fi
 
-docs-files: docs/README.md docs/release-notes.md docs/release-notes.mdx docs/variables.yml
+docs-files: docs/README.md docs/release-notes.md docs/release-notes.mdx docs/variables.yml docs/helm/values.schema.json
 
 docs/README.md: docs/doc-links.yml $(tools/tocgen)
 	$(tools/tocgen) --input $< > $@
@@ -152,6 +152,11 @@ docs/release-notes.mdx: CHANGELOG.yml $(tools/relnotesgen)
 
 docs/variables.yml: CHANGELOG.yml $(tools/relnotesgen)
 	$(tools/relnotesgen) --variables --input $< > $@
+	git add $@
+
+docs/helm/values.schema.json: charts/telepresence-oss/values.schema.yaml $(tools/y2j)
+	mkdir -p $(@D)
+	$(tools/y2j) < $< > $@
 	git add $@
 
 PKG_VERSION = $(shell go list ./pkg/version)
