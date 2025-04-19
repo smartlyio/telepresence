@@ -73,7 +73,6 @@ func (ac *client) Tunnel(ctx context.Context, opts ...grpc.CallOption) (tunnel.C
 		if tc > 0 {
 			atomic.CompareAndSwapInt32(&ac.tunnelCount, tc, tc-1)
 		}
-		atomic.AddInt32(&ac.tunnelCount, -1)
 		dlog.Debugf(ctx, "%s(%s) have %d active tunnels", ac, net.IP(ac.info.PodIp), atomic.LoadInt32(&ac.tunnelCount))
 	}()
 	atomic.StoreInt64(&ac.lastActive, time.Now().UnixNano())
@@ -570,7 +569,7 @@ func (s *clients) updateClients(ctx context.Context, ais []*manager.AgentPodInfo
 			ac := &client{
 				session: s.session,
 				remove: func() {
-					deleteClient(k)
+					s.clients.Delete(k)
 				},
 				info: ai,
 			}
