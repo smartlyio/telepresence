@@ -36,7 +36,7 @@ func (info *Info) DaemonID() *Identifier {
 const (
 	daemonsDirName    = "daemons"
 	keepAliveInterval = 5 * time.Second
-	maxNoSignOfLife   = keepAliveInterval + 2*time.Second
+	maxNoSignOfLife   = 2*keepAliveInterval + 2*time.Second
 )
 
 func LoadInfo(ctx context.Context, file string) (*Info, error) {

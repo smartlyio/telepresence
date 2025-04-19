@@ -348,19 +348,15 @@ func LaunchDaemon(ctx context.Context, daemonID *daemon.Identifier, networkAlias
 		return nil, err
 	}
 
-	// Ensure that an ID exists in the config prior to launching the daemon. If it doesn't, the daemon
-	// will try to add it and fail, because the config is a read-only file system.
-	if _, err = client.InstallID(ctx); err != nil {
-		return nil, err
-	}
-
 	if err = EnsureNetwork(ctx, "telepresence"); err != nil {
 		return nil, err
 	}
+
 	opts, addr, err := DaemonOptions(ctx, daemonID, networkAliases)
 	if err != nil {
 		return nil, errcat.NoDaemonLogs.New(err)
 	}
+
 	args := DaemonArgs(daemonID, addr.Port)
 
 	allArgs := make([]string, 0, len(opts)+len(args)+4)
@@ -396,13 +392,12 @@ func LaunchDaemon(ctx context.Context, daemonID *daemon.Identifier, networkAlias
 		}
 		break
 	}
+
 	if err = enableK8SAuthenticator(ctx, daemonID); err != nil {
 		return nil, err
 	}
-	if conn, err = ConnectDaemon(ctx, addr.String()); err != nil {
-		return nil, err
-	}
-	return conn, nil
+
+	return ConnectDaemon(ctx, addr.String())
 }
 
 // containerPort returns the port that the container uses internally to expose the given
