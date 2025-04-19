@@ -18,6 +18,7 @@ spec:
       containers:
         - name: echo-udp-server
           image: ghcr.io/telepresenceio/udp-echo:latest
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
               protocol: UDP
@@ -30,6 +31,7 @@ spec:
               memory: 8Mi
         - name: echo-server
           image: ghcr.io/telepresenceio/echo-server:latest
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
           env:

@@ -153,6 +153,7 @@ spec:
       containers:
         - name: hello
           image: ghcr.io/telepresenceio/echo-server:latest
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
               name: http

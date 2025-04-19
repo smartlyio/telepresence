@@ -51,6 +51,7 @@ spec:
       containers:
       - name: {{ .Name }}-app
         image: ghcr.io/telepresenceio/echo-server:latest
+        imagePullPolicy: IfNotPresent
         ports:
           - containerPort: 8080
             name: http

@@ -44,6 +44,7 @@ spec:
       containers:
         - name: echo-one
           image: ghcr.io/telepresenceio/echo-server:latest
+          imagePullPolicy: IfNotPresent
           ports:
             - name: echo-one
               containerPort: 8080
@@ -53,6 +54,7 @@ spec:
               memory: 128Mi
         - name: echo-two
           image: ghcr.io/telepresenceio/echo-server:latest
+          imagePullPolicy: IfNotPresent
           ports:
             - name: echo-two
               containerPort: 8081
