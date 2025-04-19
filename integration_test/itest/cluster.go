@@ -772,14 +772,15 @@ func TelepresenceOk(ctx context.Context, args ...string) string {
 	t := getT(ctx)
 	t.Helper()
 	stdout, stderr, err := Telepresence(ctx, args...)
+	if !assert.NoError(t, err) {
+		t.Fatalf("telepresence was unable to run, stdout %s", stdout)
+	}
 	require.NoError(t, err, "telepresence was unable to run, stdout %s", stdout)
-	if err == nil {
-		if (strings.HasPrefix(stderr, "Warning:") || strings.Contains(stderr, "has been deprecated")) && !strings.ContainsRune(stderr, '\n') {
-			// Accept warnings, but log them.
-			dlog.Warn(ctx, stderr)
-		} else {
-			assert.Empty(t, stderr, "Expected stderr to be empty, but got: %s", stderr)
-		}
+	if (strings.HasPrefix(stderr, "Warning:") || strings.Contains(stderr, "has been deprecated")) && !strings.ContainsRune(stderr, '\n') {
+		// Accept warnings, but log them.
+		dlog.Warn(ctx, stderr)
+	} else {
+		assert.Empty(t, stderr, "Expected stderr to be empty, but got: %s", stderr)
 	}
 	return stdout
 }
@@ -947,7 +948,7 @@ func retryKubectl(ctx context.Context, namespace string, args []string, f func([
 			err = backoff.Permanent(err)
 		}
 		return err
-	}, b)
+	}, backoff.WithContext(b, ctx))
 }
 
 func CreateNamespaces(ctx context.Context, namespaces ...string) {
