@@ -1,6 +1,7 @@
 package patcher
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -95,13 +96,25 @@ func CreateExternalKubeConfig(
 		}
 	}
 
+	content, err := clientcmd.Write(config)
+	if err != nil {
+		return nil, err
+	}
+
 	// Store the file using its context name under the <telepresence cache>/kube directory
 	kubeConfigFile := ioutil.SafeName(config.CurrentContext)
 	kubeConfigDir := filepath.Join(filelocation.AppUserCacheDir(ctx), kubeConfigs)
+	path := filepath.Join(kubeConfigDir, kubeConfigFile)
+	oldContent, err := os.ReadFile(path)
+	if err == nil && bytes.Equal(oldContent, content) {
+		dlog.Debugf(ctx, "kubeconfig unchanged")
+		return &config, nil
+	}
+
 	if err = os.MkdirAll(kubeConfigDir, 0o700); err != nil {
 		return nil, err
 	}
-	if err = clientcmd.WriteToFile(config, filepath.Join(kubeConfigDir, kubeConfigFile)); err != nil {
+	if err = os.WriteFile(path, content, 0o644); err != nil {
 		return nil, err
 	}
 	return &config, nil
