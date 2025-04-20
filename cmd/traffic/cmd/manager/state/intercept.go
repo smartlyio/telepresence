@@ -190,18 +190,18 @@ func (s *state) preparePorts(ac *agentconfig.Sidecar, cn *agentconfig.Container,
 
 			to := pm.To()
 			if _, ok := uniqueTargets[to]; ok {
-				return fmt.Errorf("multiple port definitions targeting %s", to)
+				return fmt.Errorf("multiple port definitions targeting %s", &to)
 			}
 			uniqueTargets[to] = struct{}{}
 
 			from := types2.PortAndProto{Proto: pmIc.Protocol, Port: pmIc.ContainerPort}
 			if _, ok := uniqueContainerPorts[from]; ok {
-				return fmt.Errorf("multiple port definitions using container port %s", from)
+				return fmt.Errorf("multiple port definitions using container port %s", &from)
 			}
 			uniqueContainerPorts[from] = struct{}{}
 
 			// Return the resolved numeric container port.
-			podPorts[i] = fmt.Sprintf("%d:%s", pmIc.ContainerPort, to)
+			podPorts[i] = fmt.Sprintf("%d:%s", pmIc.ContainerPort, &to)
 		}
 	}
 
@@ -644,7 +644,7 @@ func checkInterceptAnnotations(ctx context.Context, wl k8sapi.Workload) (bool, e
 	}
 
 	webhookEnabled := true
-	manuallyManaged := annotation.GetAnnotation(ctx, pod.ObjectMeta.Annotations, annotation.ManuallyInjected, annotation.LegacyManuallyInjected) == "true"
+	manuallyManaged := annotation.GetAnnotation(ctx, pod.Annotations, annotation.ManuallyInjected, annotation.LegacyManuallyInjected) == "true"
 	ia := annotation.GetAnnotation(ctx, a, annotation.InjectTrafficAgent, annotation.LegacyInjectTrafficAgent)
 	switch ia {
 	case "":

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"strings"
 	"time"
@@ -83,7 +84,7 @@ func TalkToManager(ctx context.Context, address string, info *rpc.AgentInfo, sta
 	// We use this to place a file which conveys 'readiness'
 	// The presence of this file is used in the readiness check.
 	dir := "/tmp/agent"
-	if _, err := dos.Stat(ctx, dir); os.IsNotExist(err) {
+	if _, err := dos.Stat(ctx, dir); errors.Is(err, fs.ErrNotExist) {
 		if err := dos.Mkdir(ctx, "/tmp/agent", 0o777); err != nil {
 			return err
 		}

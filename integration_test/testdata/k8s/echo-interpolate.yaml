@@ -38,6 +38,7 @@ spec:
       containers:
         - name: echo-interpolate
           image: ghcr.io/telepresenceio/echo-server:latest
+          imagePullPolicy: IfNotPresent
           envFrom:
             - configMapRef:
                 name: interpolate-config

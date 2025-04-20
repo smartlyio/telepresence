@@ -31,6 +31,7 @@ spec:
       containers:
         - name: echo-easy
           image: ghcr.io/telepresenceio/echo-server:latest
+          imagePullPolicy: IfNotPresent
           env:
             - name: TEST
               value: "DATA"

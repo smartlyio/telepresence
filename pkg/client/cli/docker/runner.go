@@ -22,7 +22,7 @@ import (
 	"github.com/telepresenceio/telepresence/v2/pkg/client/cli/env"
 	"github.com/telepresenceio/telepresence/v2/pkg/client/cli/flags"
 	"github.com/telepresenceio/telepresence/v2/pkg/client/cli/mount"
-	"github.com/telepresenceio/telepresence/v2/pkg/client/cli/spinner"
+	"github.com/telepresenceio/telepresence/v2/pkg/client/cli/progress"
 	"github.com/telepresenceio/telepresence/v2/pkg/client/docker"
 	"github.com/telepresenceio/telepresence/v2/pkg/dos"
 	"github.com/telepresenceio/telepresence/v2/pkg/errcat"
@@ -42,7 +42,7 @@ type Runner struct {
 func (s *Runner) Run(ctx context.Context, waitMessage string, args ...string) error {
 	ud := daemon.GetUserClient(ctx)
 	var runFlags *RunFlags
-	if s.Flags.imageIndex > 0 {
+	if s.imageIndex > 0 {
 		// arguments between the "--" separator and the image name are docker run flags, and
 		// we must extract the relevant network flags.
 		runArgs := args[:s.imageIndex]
@@ -52,15 +52,19 @@ func (s *Runner) Run(ctx context.Context, waitMessage string, args ...string) er
 		if err != nil {
 			return err
 		}
-		s.Flags.imageIndex = len(runArgs)
+		s.imageIndex = len(runArgs)
 		if len(runArgs) > 0 {
 			args = append(runArgs, args...)
 		}
 		if pps := runFlags.PublishedPorts; len(pps) > 0 {
-			s.Flags.PublishedPorts = append(s.Flags.PublishedPorts, pps...)
+			s.PublishedPorts = append(s.PublishedPorts, pps...)
 		}
 		if nts := runFlags.Networks; len(nts) > 0 {
-			connectCancel, err := ConnectNetworksToDaemon(ctx, runFlags.Networks, ud.DaemonID().ContainerName())
+			ns := make([]Network, len(nts))
+			for i, n := range nts {
+				ns[i] = Network{Name: n}
+			}
+			connectCancel, err := ConnectNetworksToDaemon(ctx, ud.DaemonID().ContainerName(), ns)
 			defer connectCancel()
 			if err != nil {
 				return err
@@ -101,18 +105,17 @@ func (s *Runner) Run(ctx context.Context, waitMessage string, args ...string) er
 	outRdr, outWrt := io.Pipe()
 	procCtx = dos.WithStdout(procCtx, outWrt)
 
-	spin := spinner.New(ctx, "container "+s.ContainerName)
 	w := s.start(procCtx, s.ContainerName, envFile, runFlags, args)
 	if w.err == nil {
 		w.err = ud.AddHandler(ctx, s.Environment["TELEPRESENCE_INTERCEPT_ID"], w.cmd, w.name)
-		spin.Message("started")
-		spin.DoneMsg(waitMessage)
-		if waitMessage != "" && spin.IsNoOp() {
-			ioutil.Println(dos.Stdout(ctx), waitMessage)
-		}
+		progress.Write(ctx, progress.StartedEvent(s.ContainerName))
 	} else {
-		_ = spin.Error(w.err)
+		w.err = progress.MaybeWriteError(ctx, s.ContainerName, w.err)
 	}
+
+	// Can't have the progress monitor running and show process output at the same time.
+	progress.Stop(ctx)
+
 	go func() {
 		_, _ = io.Copy(dos.Stdout(ctx), outRdr)
 	}()
@@ -121,9 +124,8 @@ func (s *Runner) Run(ctx context.Context, waitMessage string, args ...string) er
 	}()
 
 	if err = w.wait(procCtx); err != nil {
-		return spin.Error(err)
+		return err
 	}
-	spin.Done()
 	return nil
 }
 
@@ -210,7 +212,7 @@ func (s *Runner) start(ctx context.Context, name, envFile string, runFlags *RunF
 			}
 		}
 		ourArgs = append(ourArgs, "--dns-search", "tel2-search")
-		for _, p := range s.Flags.PublishedPorts {
+		for _, p := range s.PublishedPorts {
 			ourArgs = append(ourArgs, "-p", p.String())
 		}
 	} else {
@@ -248,7 +250,7 @@ func (s *Runner) start(ctx context.Context, name, envFile string, runFlags *RunF
 		// inherits the containerized daemons network config. That config includes the "telepresence" network though,
 		// so we can now create socat listeners that dispatch from this network to the daemon containers network.
 		daemonID := ud.DaemonID().ContainerName()
-		for _, p := range s.Flags.PublishedPorts {
+		for _, p := range s.PublishedPorts {
 			var portCancel context.CancelFunc
 			portCancel, w.err = startPortPublisher(ctx, daemonID, p)
 			w.procsToCancel = append(w.procsToCancel, portCancel)

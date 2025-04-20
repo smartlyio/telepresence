@@ -16,6 +16,7 @@ require (
 	github.com/datawire/go-ftpserver v0.1.3
 	github.com/docker/docker v28.0.4+incompatible
 	github.com/docker/go-connections v0.5.0
+	github.com/docker/go-units v0.5.0
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/go-json-experiment/json v0.0.0-20250223041408-d3c622f1b874
 	github.com/godbus/dbus/v5 v5.1.0
@@ -27,6 +28,7 @@ require (
 	github.com/hectane/go-acl v0.0.0-20230122075934-ca0b05cb1adb
 	github.com/miekg/dns v1.1.65
 	github.com/moby/term v0.5.2
+	github.com/morikuni/aec v1.0.0
 	github.com/pkg/sftp v1.13.9
 	github.com/prometheus/client_golang v1.22.0
 	github.com/puzpuzpuz/xsync/v3 v3.5.1
@@ -85,7 +87,6 @@ require (
 	github.com/docker/distribution v2.8.3+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.9.3 // indirect
 	github.com/docker/go-metrics v0.0.1 // indirect
-	github.com/docker/go-units v0.5.0 // indirect
 	github.com/emicklei/go-restful/v3 v3.12.2 // indirect
 	github.com/evanphx/json-patch v5.9.11+incompatible // indirect
 	github.com/exponent-io/jsonpath v0.0.0-20210407135951-1de76d718b3f // indirect
@@ -139,7 +140,6 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/monochromegane/go-gitignore v0.0.0-20200626010858-205db1a8cc00 // indirect
-	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect

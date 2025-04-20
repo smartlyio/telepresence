@@ -53,6 +53,7 @@ spec:
       containers:
         - name: socat
           image: alpine/socat:latest
+          imagePullPolicy: IfNotPresent
           args:
             - "tcp-listen:9080,fork,reuseaddr"
             - "tcp-connect:localhost:8080"
@@ -67,6 +68,7 @@ spec:
               name: socat-data
         - name: echo
           image: ghcr.io/telepresenceio/echo-server:latest
+          imagePullPolicy: IfNotPresent
           env:
             - name: TAG
               value: echo-server

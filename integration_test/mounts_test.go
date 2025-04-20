@@ -1,16 +1,16 @@
 package integration_test
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
 	"time"
 
+	core "k8s.io/api/core/v1"
+
 	"github.com/datawire/dlib/dtime"
 	"github.com/telepresenceio/telepresence/v2/integration_test/itest"
-	"github.com/telepresenceio/telepresence/v2/pkg/dos"
 )
 
 type mountsSuite struct {
@@ -39,34 +39,69 @@ func (s *mountsSuite) SetupSuite() {
 	s.Suite.SetupSuite()
 }
 
-func (s *mountsSuite) createDeployment() (string, []byte) {
+func (s *mountsSuite) createDeployment() [3]itest.TplResource {
 	ctx := s.Context()
-	k8s := filepath.Join("testdata", "k8s")
 	rq := s.Require()
-	pvcPath := filepath.Join(k8s, "local-pvc.yaml")
-	rq.NoError(s.Kubectl(ctx, "apply", "-f", pvcPath))
-	mf, err := itest.ReadTemplate(ctx, filepath.Join(k8s, "hello-pv-volume.goyaml"), &itest.PersistentVolume{
-		Name:           "hello",
-		MountDirectory: "/data",
-	})
-	rq.NoError(err)
-	rq.NoError(s.Kubectl(dos.WithStdin(ctx, bytes.NewReader(mf)), "apply", "-f", "-"))
-	return pvcPath, mf
+
+	pv := &itest.PersistentVolume{
+		Name: "local-pv",
+	}
+	if s.UseLocalPathProvisioner() {
+		pv.Annotations = map[string]string{
+			"pv.kubernetes.io/provisioned-by": "rancher.io/local-path",
+		}
+		pv.StorageClassName = "local-path"
+	}
+	rq.NoError(pv.Apply(ctx, s.AppNamespace()))
+
+	pvc := &itest.PersistentVolumeClaim{
+		Name: "local-pvc",
+	}
+	if s.UseLocalPathProvisioner() {
+		pvc.Annotations = map[string]string{
+			"pv.kubernetes.io/provisioned-by": "rancher.io/local-path",
+		}
+		pvc.StorageClassName = "local-path"
+	}
+	rq.NoError(pvc.Apply(ctx, s.AppNamespace()))
+
+	dep := &itest.Generic{
+		Name:     "hello",
+		Registry: "ghcr.io/telepresenceio",
+		Image:    "echo-server:latest",
+		Volumes: []core.Volume{
+			{
+				Name: "rw-volume",
+				VolumeSource: core.VolumeSource{
+					PersistentVolumeClaim: &core.PersistentVolumeClaimVolumeSource{ClaimName: pvc.Name},
+				},
+			},
+		},
+		VolumeMounts: []core.VolumeMount{
+			{
+				Name:      "rw-volume",
+				MountPath: "/data",
+			},
+		},
+	}
+	rq.NoError(dep.Apply(ctx, s.AppNamespace()))
+	rq.NoError(s.RolloutStatusWait(ctx, "deployment/hello"))
+	return [3]itest.TplResource{pv, pvc, dep}
 }
 
-func (s *mountsSuite) deleteDeployment(pvcPath string, mf []byte) {
-	ctx := s.Context()
-	rq := s.Require()
-	rq.NoError(s.Kubectl(dos.WithStdin(ctx, bytes.NewReader(mf)), "delete", "-f", "-"))
-	rq.NoError(s.Kubectl(ctx, "delete", "-f", pvcPath))
+func (s *mountsSuite) deleteDeployment(ts [3]itest.TplResource) {
+	// Delete in reverse order
+	for i := 2; i >= 0; i-- {
+		s.Require().NoError(ts[i].Delete(s.Context()))
+	}
 }
 
 func (s *mountsSuite) Test_MountWrite() {
 	if runtime.GOOS == "windows" {
 		s.T().SkipNow()
 	}
-	pvcPath, mf := s.createDeployment()
-	defer s.deleteDeployment(pvcPath, mf)
+	ts := s.createDeployment()
+	defer s.deleteDeployment(ts)
 
 	ctx := s.Context()
 	mountPoint := filepath.Join(s.T().TempDir(), "mnt")
@@ -95,8 +130,8 @@ func (s *mountsSuite) Test_MountReadOnly() {
 	if runtime.GOOS == "windows" {
 		s.T().SkipNow()
 	}
-	pvcPath, mf := s.createDeployment()
-	defer s.deleteDeployment(pvcPath, mf)
+	rs := s.createDeployment()
+	defer s.deleteDeployment(rs)
 	ctx := s.Context()
 
 	mountPoint := filepath.Join(s.T().TempDir(), "mnt")

@@ -95,7 +95,7 @@ func testFStat(t *testing.T, okIfBTimeIsCTime bool) (btimeIsCTime bool) {
 		}
 	}
 
-	if okIfBTimeIsCTime && stat.BirthTime() == stat.ChangeTime() {
+	if okIfBTimeIsCTime && stat.BirthTime().Equal(stat.ChangeTime()) {
 		btimeIsCTime = true
 		t.Logf("btime: %v (spoofed with ctime)", stat.BirthTime())
 	} else {

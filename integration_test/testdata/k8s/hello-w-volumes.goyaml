@@ -117,6 +117,7 @@ spec:
       containers:
         - name: hello-container-1
           image: nginx
+          imagePullPolicy: IfNotPresent
           env:
             - name: NGINX_HOST
               value: "hello-1.com"
@@ -140,6 +141,7 @@ spec:
             periodSeconds: 3
         - name: hello-container-2
           image: nginx
+          imagePullPolicy: IfNotPresent
           env:
             - name: NGINX_HOST
               value: "hello-2.com"

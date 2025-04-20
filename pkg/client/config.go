@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"math"
 	"net/netip"
 	"os"
@@ -759,6 +760,7 @@ type Intercept struct {
 	DefaultPort         int                        `json:"defaultPort"`
 	UseFtp              bool                       `json:"useFtp"`
 	Telemount           Telemount                  `json:"telemount,omitzero"`
+	MountsRoot          string                     `json:"mountsRoot"`
 }
 
 func (ic *Intercept) defaults() DefaultsAware {
@@ -797,6 +799,9 @@ type Cluster struct {
 
 	// deprecated, use Routing.VirtualSubnet
 	OldVirtualIPSubnet string `json:"virtualIPSubnet"`
+
+	// If set, add flag "--add-host=host.docker.internal:host-gateway" when starting the containerized daemon container
+	DockerAddHostGateway bool `json:"dockerAddHostGateway"`
 }
 
 // This is used by a different config -- the k8s_config, which needs to be able to tell if it's overridden at a cluster or environment variable level.
@@ -807,6 +812,7 @@ var defaultCluster = Cluster{ //nolint:gochecknoglobals // constant
 	DefaultManagerNamespace: defaultDefaultManagerNamespace,
 	ConnectFromRootDaemon:   true,
 	AgentPortForward:        true,
+	DockerAddHostGateway:    defaultDockerAddHostGateway,
 }
 
 func (cc *Cluster) defaults() DefaultsAware {
@@ -895,7 +901,7 @@ func (r *Routing) merge(o *Routing) {
 	if o.VirtualSubnet != defaultVirtualSubnet {
 		r.VirtualSubnet = o.VirtualSubnet
 	}
-	if o.AutoResolveConflicts != defaultAutoResolveConflicts { //nolint:gosimple // keep for the semantic clarity
+	if o.AutoResolveConflicts != defaultAutoResolveConflicts { //nolint:staticcheck // keep for the semantic clarity
 		r.AutoResolveConflicts = o.AutoResolveConflicts
 	}
 }
@@ -1050,7 +1056,7 @@ func LoadConfig(c context.Context) (cfg Config, err error) {
 		fileName := filepath.Join(dir, ConfigFile)
 		bs, err := os.ReadFile(fileName)
 		if err != nil {
-			if os.IsNotExist(err) {
+			if errors.Is(err, fs.ErrNotExist) {
 				err = nil
 			}
 			return err

@@ -2,6 +2,8 @@ package client
 
 import "net/netip"
 
+const defaultDockerAddHostGateway = false
+
 type OSSpecificConfig struct {
 	Network Network `json:"network,omitzero"`
 }
@@ -34,11 +36,11 @@ type Network struct {
 }
 
 func (n *Network) merge(o *Network) {
-	if o.DNSWithFallback != defaultDNSWithFallback { //nolint:gosimple // explicit default comparison
+	if o.DNSWithFallback != defaultDNSWithFallback { //nolint:staticcheck // keep for the semantic clarity
 		n.DNSWithFallback = o.DNSWithFallback
 	}
 }
 
 func (n *Network) IsZero() bool {
-	return n == nil || n.DNSWithFallback == defaultDNSWithFallback //nolint:gosimple // explicit default comparison
+	return n == nil || n.DNSWithFallback == defaultDNSWithFallback //nolint:staticcheck // keep for the semantic clarity
 }

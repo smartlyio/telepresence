@@ -2,7 +2,8 @@ package client
 
 import (
 	"context"
-	"os"
+	"errors"
+	"io/fs"
 	"path/filepath"
 	"strings"
 
@@ -18,7 +19,7 @@ func InstallID(ctx context.Context) (string, error) {
 	switch {
 	case err == nil:
 		return strings.TrimSpace(string(data)), nil
-	case os.IsNotExist(err):
+	case errors.Is(err, fs.ErrNotExist):
 		id := uuid.New().String()
 		if err = dos.WriteFile(ctx, idFile, []byte(id), 0o644); err != nil {
 			return "", err

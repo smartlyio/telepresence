@@ -9,6 +9,42 @@ The new `telepresence wiretap` command introduces a read-only form of an `interc
 Similar to an `ingest`, a `wiretap` will always enforce read-only status on all volume mounts, and since that makes the `wiretap` completely read-only, there's no limit to how many simultaneous wiretaps that can be served. In fact, a `wiretap` and an `intercept` on the same port can run simultaneously.
 </div>
 
+## <div style="display:flex;"><img src="images/feature.png" alt="feature" style="width:30px;height:fit-content;"/><div style="display:flex;margin-left:7px;">Human friendly progress reporting</div></div>
+<div style="margin-left: 15px">
+
+Telepresence now uses a progress reporter that is very similar to the one used by Docker compose. The implementation is a variation of that reporter's source code, so big thanks to the Docker compose CLI authors for making it available as OSS.
+A new global `--progress <progress>` flag was added. It defaults to "auto" which means that the style is chosen depending on whether the command runs from a tty type terminal. Other possible values are "plain", "quiet", and "json". `--progress quiet` is implied when formatted output is chosen using `--output json|yaml`.
+</div>
+
+## <div style="display:flex;"><img src="images/feature.png" alt="feature" style="width:30px;height:fit-content;"/><div style="display:flex;margin-left:7px;">Add intercept.mountsRoot to the client configuration</div></div>
+<div style="margin-left: 15px">
+
+The new `intercept.mountsRoot` can be set to a directory that will be used as the root for all automatically generated mount directories. The default is to use the platforms temp directory.
+The setting is not used on windows, where the mounts use drive letters.
+</div>
+
+## <div style="display:flex;"><img src="images/feature.png" alt="feature" style="width:30px;height:fit-content;"/><div style="display:flex;margin-left:7px;">Add cluster.dockerAddHostGateway to the client configuration.</div></div>
+<div style="margin-left: 15px">
+
+When `cluster.dockerAddHostGateway` is set to `true`, the `docker run` that starts the containerized Telepresence daemon will include the flag `--add-host host.docker.internal:host-gateway`.
+The flag is set to `true` by default on linux platforms and `false` on other platforms.
+</div>
+
+## <div style="display:flex;"><img src="images/change.png" alt="change" style="width:30px;height:fit-content;"/><div style="display:flex;margin-left:7px;">Dropped support for Telepresence legacy flags</div></div>
+<div style="margin-left: 15px">
+
+The `telepresence` CLI command will no longer support legacy flags such as:
+
+- `--swap-deployment`
+- `--new-deployment`
+- `--docker-mount`
+- `--method`
+
+A "Legacy Telepresence command used" warning has been printed for several years now, and the mapping for the
+`--swap-deployment` was the `intercept` command, which is very confusing today since we now have the `replace`
+command.
+</div>
+
 ## Version 2.22.3 <span style="font-size: 16px;">(April  8)</span>
 ## <div style="display:flex;"><img src="images/change.png" alt="change" style="width:30px;height:fit-content;"/><div style="display:flex;margin-left:7px;">The Windows install script will now install Telepresence to "%ProgramFiles%\telepresence"</div></div>
 <div style="margin-left: 15px">

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 
@@ -125,7 +126,7 @@ func addAppMounts(ctx context.Context, mps types.MountPolicies, ag *agentconfig.
 	}
 
 	if appMountsDir, err := dos.Open(ctx, ag.MountPoint); err != nil {
-		if !os.IsNotExist(err) {
+		if !errors.Is(err, fs.ErrNotExist) {
 			return err
 		}
 	} else {
@@ -168,7 +169,7 @@ func mountVRS(ctx context.Context, mps types.MountPolicies, ag *agentconfig.Cont
 	// Capture /var/run/secrets subdirs that has been injected but not added by the injector.
 	vrs, err := dos.ReadDir(ctx, vrsDir)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, fs.ErrNotExist) {
 			err = nil
 		}
 		return err

@@ -86,7 +86,7 @@ func getVersion(ctx context.Context, gc versionAPI) (*manager.VersionInfo2, erro
 	err := backoff.Retry(func() (err error) {
 		vi, err = gc.Version(ctx, &empty.Empty{})
 		return err
-	}, &b)
+	}, backoff.WithContext(&b, ctx))
 	if err == nil {
 		dlog.Infof(ctx, "Connected to %s %s", vi.Name, vi.Version)
 	}

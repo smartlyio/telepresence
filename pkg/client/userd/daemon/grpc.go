@@ -13,7 +13,6 @@ import (
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/emptypb"
 	empty "google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/datawire/dlib/dexec"
@@ -467,7 +466,7 @@ func (s *service) RootDaemonVersion(ctx context.Context, empty *empty.Empty) (vi
 	return vi, err
 }
 
-func (s *service) AgentImageFQN(ctx context.Context, empty *emptypb.Empty) (fqn *manager.AgentImageFQN, err error) {
+func (s *service) AgentImageFQN(ctx context.Context, empty *empty.Empty) (fqn *manager.AgentImageFQN, err error) {
 	err = s.WithSession(ctx, func(ctx context.Context, session userd.Session) error {
 		fqn, err = session.ManagerClient().GetAgentImageFQN(ctx, empty)
 		return err
@@ -527,7 +526,7 @@ func (s *service) GetIntercept(ctx context.Context, request *manager.GetIntercep
 	return ii, err
 }
 
-func (s *service) SetDNSExcludes(ctx context.Context, req *daemon.SetDNSExcludesRequest) (*emptypb.Empty, error) {
+func (s *service) SetDNSExcludes(ctx context.Context, req *daemon.SetDNSExcludesRequest) (*empty.Empty, error) {
 	err := s.WithSession(ctx, func(ctx context.Context, session userd.Session) error {
 		_, err := session.RootDaemon().SetDNSExcludes(ctx, req)
 		return err
@@ -535,7 +534,7 @@ func (s *service) SetDNSExcludes(ctx context.Context, req *daemon.SetDNSExcludes
 	return &empty.Empty{}, err
 }
 
-func (s *service) SetDNSMappings(ctx context.Context, req *daemon.SetDNSMappingsRequest) (*emptypb.Empty, error) {
+func (s *service) SetDNSMappings(ctx context.Context, req *daemon.SetDNSMappingsRequest) (*empty.Empty, error) {
 	err := s.WithSession(ctx, func(ctx context.Context, session userd.Session) error {
 		_, err := session.RootDaemon().SetDNSMappings(ctx, req)
 		return err

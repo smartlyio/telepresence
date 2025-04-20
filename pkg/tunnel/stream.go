@@ -16,7 +16,7 @@ import (
 	rpc "github.com/telepresenceio/telepresence/rpc/v2/manager"
 )
 
-// Version
+// Version of the stream protocol.
 //
 //	0 which didn't report versions and didn't do synchronization
 //	1 used MuxTunnel instead of one tunnel per connection.

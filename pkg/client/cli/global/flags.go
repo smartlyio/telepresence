@@ -5,12 +5,15 @@ import (
 )
 
 const (
-	FlagDocker   = "docker"
 	FlagContext  = "context"
-	FlagUse      = "use"
-	FlagOutput   = "output"
+	FlagDocker   = "docker"
 	FlagNoReport = "no-report"
+	FlagOutput   = "output"
+	FlagProgress = "progress"
+	FlagUse      = "use"
 )
+
+var FlagNames = []string{FlagContext, FlagDocker, FlagNoReport, FlagOutput, FlagProgress, FlagUse} //nolint:gochecknoglobals // constant names
 
 func Flags(hasKubeFlags bool) *pflag.FlagSet {
 	flags := pflag.NewFlagSet("", 0)
@@ -27,5 +30,6 @@ func Flags(hasKubeFlags bool) *pflag.FlagSet {
 	f.Deprecated = "not used"
 	flags.String(FlagUse, "", "Match expression that uniquely identifies the daemon container")
 	flags.String(FlagOutput, "default", "Set the output format, supported values are 'json', 'yaml', and 'default'")
+	flags.String(FlagProgress, "auto", `Set type of progress output (auto, tty, plain, json, quiet)`)
 	return flags
 }

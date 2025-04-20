@@ -4,7 +4,9 @@ package docker
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"io/fs"
 	"net"
 	"net/netip"
 	"net/url"
@@ -46,8 +48,8 @@ import (
 const (
 	telepresenceImage = "telepresence"
 	TpCache           = "/root/.cache/telepresence"
-	dockerTpConfig    = "/root/.config/telepresence"
-	dockerTpLog       = "/root/.cache/telepresence/logs"
+	DockerTpConfig    = "/root/.config/telepresence"
+	DockerTpLog       = "/root/.cache/telepresence/logs"
 )
 
 var ClientImageName = telepresenceImage //nolint:gochecknoglobals // extension point
@@ -65,7 +67,7 @@ func ClientImage(ctx context.Context) string {
 }
 
 // DaemonOptions returns the options necessary to pass to a docker run when starting a daemon container.
-func DaemonOptions(ctx context.Context, daemonID *daemon.Identifier) ([]string, *net.TCPAddr, error) {
+func DaemonOptions(ctx context.Context, daemonID *daemon.Identifier, aliases []string) ([]string, *net.TCPAddr, error) {
 	as, err := client.FreePortsTCP(1)
 	if err != nil {
 		return nil, nil, err
@@ -80,9 +82,12 @@ func DaemonOptions(ctx context.Context, daemonID *daemon.Identifier) ([]string, 
 		"-e", fmt.Sprintf("TELEPRESENCE_UID=%d", os.Getuid()),
 		"-e", fmt.Sprintf("TELEPRESENCE_GID=%d", os.Getgid()),
 		"-p", fmt.Sprintf("%s:%d", addr, addr.Port),
-		"-v", fmt.Sprintf("%s:%s:ro", filelocation.AppUserConfigDir(ctx), dockerTpConfig),
+		"-v", fmt.Sprintf("%s:%s:ro", filelocation.AppUserConfigDir(ctx), DockerTpConfig),
 		"-v", fmt.Sprintf("%s:%s", filelocation.AppUserCacheDir(ctx), TpCache),
-		"-v", fmt.Sprintf("%s:%s", filelocation.AppUserLogDir(ctx), dockerTpLog),
+		"-v", fmt.Sprintf("%s:%s", filelocation.AppUserLogDir(ctx), DockerTpLog),
+	}
+	for _, alias := range aliases {
+		opts = append(opts, "--network-alias", alias)
 	}
 	cr := daemon.GetRequest(ctx)
 	for _, ep := range cr.ExposedPorts {
@@ -98,6 +103,9 @@ func DaemonOptions(ctx context.Context, daemonID *daemon.Identifier) ([]string, 
 	env := client.GetEnv(ctx)
 	if env.ScoutDisable {
 		opts = append(opts, "-e", "SCOUT_DISABLE=1")
+	}
+	if client.GetConfig(ctx).Cluster().DockerAddHostGateway {
+		opts = append(opts, "--add-host", "host.docker.internal:host-gateway")
 	}
 	return opts, addr, nil
 }
@@ -179,7 +187,7 @@ func startAuthenticatorService(ctx context.Context, portFile string, kubeFlags m
 		dtime.SleepWithContext(ctx, 10*time.Millisecond)
 		port, err := readPortFile(ctx, portFile, configFiles)
 		if err != nil {
-			if !os.IsNotExist(err) {
+			if !errors.Is(err, fs.ErrNotExist) {
 				return 0, err
 			}
 			continue
@@ -193,7 +201,7 @@ func ensureAuthenticatorService(ctx context.Context, kubeFlags map[string]string
 	portFile := filepath.Join(filelocation.AppUserCacheDir(ctx), kubeAuthPortFile)
 	st, err := os.Stat(portFile)
 	if err != nil {
-		if !os.IsNotExist(err) {
+		if !errors.Is(err, fs.ErrNotExist) {
 			return 0, err
 		}
 	} else if st.ModTime().Add(kubeauth.PortFileStaleTime).After(time.Now()) {
@@ -202,7 +210,7 @@ func ensureAuthenticatorService(ctx context.Context, kubeFlags map[string]string
 			dlog.Debug(ctx, "kubeauth service found alive and valid")
 			return port, nil
 		}
-		if !os.IsNotExist(err) {
+		if !errors.Is(err, fs.ErrNotExist) {
 			return 0, err
 		}
 	}
@@ -251,7 +259,7 @@ func enableK8SAuthenticator(ctx context.Context, daemonID *daemon.Identifier) er
 	if err != nil {
 		return err
 	}
-	patcher.AnnotateConnectRequest(&cr.ConnectRequest, TpCache, config.CurrentContext)
+	patcher.AnnotateConnectRequest(cr.ConnectRequest, TpCache, config.CurrentContext)
 	return err
 }
 
@@ -334,25 +342,21 @@ func handleLocalK8s(ctx context.Context, daemonID *daemon.Identifier, config *ap
 // LaunchDaemon ensures that the image returned by ClientImage exists by calling PullImage. It then uses the
 // options DaemonOptions and DaemonArgs to start the image, and finally connectDaemon to connect to it. A
 // successful start yields a cache.Info entry in the cache.
-func LaunchDaemon(ctx context.Context, daemonID *daemon.Identifier) (conn *grpc.ClientConn, err error) {
+func LaunchDaemon(ctx context.Context, daemonID *daemon.Identifier, networkAliases []string) (conn *grpc.ClientConn, err error) {
 	image := ClientImage(ctx)
-	if err = PullImage(ctx, image); err != nil {
-		return nil, err
-	}
-
-	// Ensure that an ID exists in the config prior to launching the daemon. If it doesn't, the daemon
-	// will try to add it and fail, because the config is a read-only file system.
-	if _, err = client.InstallID(ctx); err != nil {
+	if err = PullImage(ctx, daemonID.Name, image); err != nil {
 		return nil, err
 	}
 
 	if err = EnsureNetwork(ctx, "telepresence"); err != nil {
 		return nil, err
 	}
-	opts, addr, err := DaemonOptions(ctx, daemonID)
+
+	opts, addr, err := DaemonOptions(ctx, daemonID, networkAliases)
 	if err != nil {
 		return nil, errcat.NoDaemonLogs.New(err)
 	}
+
 	args := DaemonArgs(daemonID, addr.Port)
 
 	allArgs := make([]string, 0, len(opts)+len(args)+4)
@@ -388,13 +392,12 @@ func LaunchDaemon(ctx context.Context, daemonID *daemon.Identifier) (conn *grpc.
 		}
 		break
 	}
+
 	if err = enableK8SAuthenticator(ctx, daemonID); err != nil {
 		return nil, err
 	}
-	if conn, err = ConnectDaemon(ctx, addr.String()); err != nil {
-		return nil, err
-	}
-	return conn, nil
+
+	return ConnectDaemon(ctx, addr.String())
 }
 
 // containerPort returns the port that the container uses internally to expose the given

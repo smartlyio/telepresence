@@ -98,6 +98,13 @@ tools/relnotesgen = $(TOOLSBINDIR)/relnotesgen$(EXE)
 $(TOOLSBINDIR)/relnotesgen$(EXE): $(TOOLSSRCDIR)/relnotesgen/**/*.go $(TOOLSSRCDIR)/relnotesgen/relnotes/relnotes.*
 	(cd $(TOOLSSRCDIR)/relnotesgen && GOOS= GOARCH= go build) && mv $(TOOLSSRCDIR)/relnotesgen/relnotesgen $(TOOLSBINDIR)
 
+# YAML to JSON
+# ==========
+#
+tools/y2j = $(TOOLSBINDIR)/y2j$(EXE)
+$(TOOLSBINDIR)/y2j$(EXE): $(TOOLSSRCDIR)/y2j/*
+	(cd $(TOOLSSRCDIR)/y2j && GOOS= GOARCH= go build) && mv $(TOOLSSRCDIR)/y2j/y2j $(TOOLSBINDIR)
+
 # Shellcheck
 # ==========
 #

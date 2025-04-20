@@ -53,7 +53,7 @@ func LoadFromUserCache(ctx context.Context, dest any, file string) error {
 
 func DeleteFromUserCache(ctx context.Context, file string) error {
 	ctx = dos.WithLockedFs(ctx)
-	if err := dos.Remove(ctx, filepath.Join(filelocation.AppUserCacheDir(ctx), file)); err != nil && !os.IsNotExist(err) {
+	if err := dos.Remove(ctx, filepath.Join(filelocation.AppUserCacheDir(ctx), file)); err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return err
 	}
 	return nil

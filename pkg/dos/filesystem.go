@@ -2,6 +2,7 @@ package dos
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -140,7 +141,7 @@ func (*osFs) Open(name string) (File, error) {
 func (fs *osFs) OpenFile(name string, flag int, perm fs.FileMode) (File, error) {
 	if fs.mustChown() {
 		if (flag & os.O_CREATE) == os.O_CREATE {
-			if _, err := os.Stat(name); os.IsNotExist(err) {
+			if _, err := os.Stat(name); errors.Is(err, os.ErrNotExist) {
 				f, err := os.OpenFile(name, flag, perm)
 				if err != nil {
 					return nil, err
@@ -191,7 +192,7 @@ func (*osFs) Symlink(oldName, newName string) error {
 
 func (fs *osFs) WriteFile(name string, data []byte, perm fs.FileMode) error {
 	if fs.mustChown() {
-		if _, err := os.Stat(name); os.IsNotExist(err) {
+		if _, err := os.Stat(name); errors.Is(err, os.ErrNotExist) {
 			return fs.chown(os.WriteFile(name, data, perm), name)
 		}
 	}

@@ -4,10 +4,10 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"embed"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
-	"os"
 	"sort"
 	"strings"
 
@@ -51,7 +51,7 @@ func addFile(tarWriter *tar.Writer, vfs fs.FS, filename string, content []byte) 
 			return err
 		}
 	} else {
-		if !os.IsNotExist(err) {
+		if !errors.Is(err, fs.ErrNotExist) {
 			return err
 		}
 		header = &tar.Header{}
@@ -125,8 +125,8 @@ func WriteChart(helmChartDir DirType, out io.Writer, chartName, version string, 
 	})
 
 	zipper := gzip.NewWriter(out)
-	zipper.Header.Extra = []byte("+aHR0cHM6Ly95b3V0dS5iZS96OVV6MWljandyTQo=") // magic number for Helm
-	zipper.Header.Comment = "Helm"
+	zipper.Extra = []byte("+aHR0cHM6Ly95b3V0dS5iZS96OVV6MWljandyTQo=") // magic number for Helm
+	zipper.Comment = "Helm"
 
 	tarWriter := tar.NewWriter(zipper)
 

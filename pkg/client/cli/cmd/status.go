@@ -19,6 +19,7 @@ import (
 	"github.com/telepresenceio/telepresence/v2/pkg/client/cli/daemon"
 	"github.com/telepresenceio/telepresence/v2/pkg/client/cli/global"
 	"github.com/telepresenceio/telepresence/v2/pkg/client/cli/output"
+	"github.com/telepresenceio/telepresence/v2/pkg/client/cli/progress"
 	"github.com/telepresenceio/telepresence/v2/pkg/client/scout"
 	"github.com/telepresenceio/telepresence/v2/pkg/ioutil"
 )
@@ -146,6 +147,7 @@ func run(cmd *cobra.Command, _ []string) error {
 		}
 	}
 	ctx := cmd.Context()
+	defer progress.Stop(ctx)
 
 	var sis []ioutil.WriterTos
 	if len(mdErr) > 0 {
@@ -440,8 +442,8 @@ func (s *MultiConnectStatusInfo) WriterTos() []io.WriterTo {
 
 func (cs *ContainerizedDaemonStatus) WriteTo(out io.Writer) (int64, error) {
 	n := 0
-	if cs.UserDaemonStatus.Running {
-		n += ioutil.Printf(out, "%s %s: Running\n", cs.UserDaemonStatus.versionName, cs.UserDaemonStatus.Name)
+	if cs.Running {
+		n += ioutil.Printf(out, "%s %s: Running\n", cs.versionName, cs.Name)
 		kvf := ioutil.DefaultKeyValueFormatter()
 		kvf.Prefix = "  "
 		kvf.Indent = "  "

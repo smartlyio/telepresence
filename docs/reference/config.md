@@ -45,12 +45,13 @@ client:
 ### Cluster
 Values for `client.cluster` controls aspects on how client's connection to the traffic-manager.
 
-| Field                     | Description                                                        | Type                                        | Default            |
-|---------------------------|--------------------------------------------------------------------|---------------------------------------------|--------------------|
-| `defaultManagerNamespace` | The default namespace where the Traffic Manager will be installed. | [string][yaml-str]                          | ambassador         |
-| `mappedNamespaces`        | Namespaces that will be mapped by default.                         | [sequence][yaml-seq] of [strings][yaml-str] | `[]`               |
-| `connectFromRootDaeamon`  | Make connections to the cluster directly from the root daemon.     | [boolean][yaml-bool]                        | `true`             |
-| `agentPortForward`        | Let telepresence-client use port-forwards directly to agents       | [boolean][yaml-bool]                        | `true`             |
+| Field                     | Description                                                                           | Type                                        | Default         |
+|---------------------------|---------------------------------------------------------------------------------------|---------------------------------------------|-----------------|
+| `defaultManagerNamespace` | The default namespace where the Traffic Manager will be installed.                    | [string][yaml-str]                          | ambassador      |
+| `mappedNamespaces`        | Namespaces that will be mapped by default.                                            | [sequence][yaml-seq] of [strings][yaml-str] | `[]`            |
+| `connectFromRootDaeamon`  | Make connections to the cluster directly from the root daemon.                        | [boolean][yaml-bool]                        | `true`          |
+| `agentPortForward`        | Let telepresence-client use port-forwards directly to agents                          | [boolean][yaml-bool]                        | `true`          |
+| `dockerAddHostGateway`    | Add `--add-host host.docker.internal:host-gateway` when starting the daemon in docker | [boolean][yaml-bool]                        | `true` on linux |
 
 ### DNS
 
@@ -126,10 +127,11 @@ These are the valid fields for the `client.images` key:
 
 The `intercept` controls applies to how Telepresence will intercept the communications to replaced containers and intercepted services.
 
-| Field                 | Description                                                                                                                                    | Type                | Default      |
-|-----------------------|------------------------------------------------------------------------------------------------------------------------------------------------|---------------------|--------------|
-| `defaultPort`         | controls which port is selected when no `--port` flag is given to the `telepresence intercept` command.                                        | int                 | 8080         |
-| `useFtp`              | Use fuseftp instead of sshfs when mounting remote file systems                                                                                 | boolean             | false        |
+| Field         | Description                                                                                                           | Type    | Default    |
+|---------------|-----------------------------------------------------------------------------------------------------------------------|---------|------------|
+| `defaultPort` | controls which port is selected when no `--port` flag is given to the `telepresence intercept` command                | int     | 8080       |
+| `useFtp`      | Use fuseftp instead of sshfs when mounting remote file systems                                                        | boolean | false      |
+| `mountsRoot`  | Directory that will be used as the root for all automatically generated mount directories (not applicable on windows) | string  | env:TMPDIR |
 
 ### Log Levels
 

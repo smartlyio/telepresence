@@ -99,6 +99,10 @@ type Cluster interface {
 	// ManagerIsVersion returns true if the final version of the ManagerVersion is included
 	// in the given version range.
 	ManagerIsVersion(versionRange string) bool
+
+	// UseRancherLocalPath returns true if the rancher-local-path provisioner is used.
+	// See: https://github.com/rancher/local-path-provisioner
+	UseLocalPathProvisioner() bool
 }
 
 // The cluster is created once and then reused by all tests. It ensures that:
@@ -128,9 +132,10 @@ type cluster struct {
 	clientRegistry  string
 	managerRegistry string
 
-	agentVersion   semver.Version
-	clientVersion  semver.Version
-	managerVersion semver.Version
+	agentVersion         semver.Version
+	clientVersion        semver.Version
+	managerVersion       semver.Version
+	localPathProvisioner bool
 }
 
 //nolint:gochecknoglobals // extension point
@@ -273,6 +278,9 @@ func (s *cluster) Initialize(ctx context.Context) context.Context {
 		require.NoError(t, err)
 		s.rootdPProf = uint16(port)
 	}
+	if pp := dos.Getenv(ctx, "DEV_LOCAL_PATH_PROVISIONER"); pp != "" {
+		s.localPathProvisioner, _ = strconv.ParseBool(pp)
+	}
 
 	exe := "telepresence"
 	if runtime.GOOS == "windows" {
@@ -306,7 +314,10 @@ func (s *cluster) Initialize(ctx context.Context) context.Context {
 	s.ensureQuit(ctx)
 	s.ensureNoManager(ctx)
 	_ = Run(ctx, "kubectl", "delete", "-f", filepath.Join("testdata", "k8s", "client_rbac.yaml"))
-	_ = Run(ctx, "kubectl", "delete", "all", "-l", AssignPurposeLabel)
+	err = Run(ctx, "kubectl", "delete", "ns,svc,deploy,clusterrole,clusterrolebinding,mutatingwebhookconfiguration,pvc,pv", "-l", AssignPurposeLabel)
+	if err != nil {
+		dlog.Errorf(ctx, "kubectl delete: %v", err)
+	}
 	return ctx
 }
 
@@ -385,13 +396,17 @@ func (s *cluster) ensureNoManager(ctx context.Context) {
 	var es []map[string]any
 	err = json.Unmarshal([]byte(out), &es)
 	require.NoError(t, err)
-	ix := slices.IndexFunc(es, func(v map[string]any) bool {
-		return v["name"] == "traffic-manager"
-	})
-	if ix >= 0 {
+	for {
+		ix := slices.IndexFunc(es, func(v map[string]any) bool {
+			return v["name"] == "traffic-manager"
+		})
+		if ix < 0 {
+			break
+		}
 		e := es[ix]
+		es = slices.Delete(es, ix, ix+1)
 		ns := e["namespace"].(string)
-		if regexp.MustCompile(`^ambassador-[0-9a-f]+$`).MatchString(ns) {
+		if regexp.MustCompile(`^ambassador-[0-9a-f]+(-[0-9])?$`).MatchString(ns) {
 			s.UninstallTrafficManager(ctx, ns)
 		} else {
 			t.Fatalf("%s is already installed in namespace %s. Please uninstall before testing.", e["chart"], ns)
@@ -442,7 +457,9 @@ func (s *cluster) withBasicConfig(c context.Context, t *testing.T) context.Conte
 
 	config.Grpc().MaxReceiveSizeV, _ = resource.ParseQuantity("10Mi")
 	config.Intercept().UseFtp = true
+	config.Intercept().MountsRoot = TempDir(c)
 	config.Routing().RecursionBlockDuration = 10 * time.Millisecond
+	config = config.Merge(client.GetConfig(c))
 
 	configYaml, err := config.MarshalYAML()
 	require.NoError(t, err)
@@ -583,6 +600,10 @@ func (s *cluster) UserdPProf() uint16 {
 
 func (s *cluster) RootdPProf() uint16 {
 	return s.rootdPProf
+}
+
+func (s *cluster) UseLocalPathProvisioner() bool {
+	return s.localPathProvisioner
 }
 
 func (s *cluster) CapturePodLogs(ctx context.Context, app, container, ns string) string {
@@ -763,14 +784,15 @@ func TelepresenceOk(ctx context.Context, args ...string) string {
 	t := getT(ctx)
 	t.Helper()
 	stdout, stderr, err := Telepresence(ctx, args...)
+	if !assert.NoError(t, err) {
+		t.Fatalf("telepresence was unable to run, stdout %s", stdout)
+	}
 	require.NoError(t, err, "telepresence was unable to run, stdout %s", stdout)
-	if err == nil {
-		if (strings.HasPrefix(stderr, "Warning:") || strings.Contains(stderr, "has been deprecated")) && !strings.ContainsRune(stderr, '\n') {
-			// Accept warnings, but log them.
-			dlog.Warn(ctx, stderr)
-		} else {
-			assert.Empty(t, stderr, "Expected stderr to be empty, but got: %s", stderr)
-		}
+	if (strings.HasPrefix(stderr, "Warning:") || strings.Contains(stderr, "has been deprecated")) && !strings.ContainsRune(stderr, '\n') {
+		// Accept warnings, but log them.
+		dlog.Warn(ctx, stderr)
+	} else {
+		assert.Empty(t, stderr, "Expected stderr to be empty, but got: %s", stderr)
 	}
 	return stdout
 }
@@ -801,6 +823,7 @@ func TelepresenceCmd(ctx context.Context, args ...string) *dexec.Cmd {
 	ctx = WithEnv(ctx, map[string]string{
 		"DEV_TELEPRESENCE_CONFIG_DIR": filelocation.AppUserConfigDir(ctx),
 		"DEV_TELEPRESENCE_LOG_DIR":    filelocation.AppUserLogDir(ctx),
+		"TELEPRESENCE_PROGRESS":       "plain",
 	})
 
 	gh := GetGlobalHarness(ctx)
@@ -846,8 +869,7 @@ func TelepresenceQuitOk(ctx context.Context) {
 // AssertQuitOutput asserts that the stdout contains the correct output from a telepresence quit command.
 func AssertQuitOutput(ctx context.Context, stdout string) {
 	t := getT(ctx)
-	assert.True(t, strings.Contains(stdout, "Telepresence Daemons quitting...done") ||
-		strings.Contains(stdout, "Telepresence Daemons have already quit"))
+	assert.True(t, stdout == "" || strings.Contains(stdout, "Quit"))
 	if t.Failed() {
 		t.Logf("Quit output was %q", stdout)
 	}
@@ -938,7 +960,7 @@ func retryKubectl(ctx context.Context, namespace string, args []string, f func([
 			err = backoff.Permanent(err)
 		}
 		return err
-	}, b)
+	}, backoff.WithContext(b, ctx))
 }
 
 func CreateNamespaces(ctx context.Context, namespaces ...string) {

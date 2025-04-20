@@ -12,7 +12,6 @@ import (
 
 	"github.com/datawire/dlib/dgroup"
 	"github.com/telepresenceio/telepresence/rpc/v2/common"
-	"github.com/telepresenceio/telepresence/rpc/v2/connector"
 	rpc "github.com/telepresenceio/telepresence/rpc/v2/connector"
 	rootdRpc "github.com/telepresenceio/telepresence/rpc/v2/daemon"
 	"github.com/telepresenceio/telepresence/rpc/v2/manager"
@@ -84,7 +83,7 @@ type Session interface {
 	WithJoinedClientSetInterface(context.Context) context.Context
 	ForeachAgentPod(ctx context.Context, fn func(context.Context, typed.PodInterface, *core.Pod), filter func(*core.Pod) bool) error
 
-	GatherLogs(context.Context, *connector.LogsRequest) (*connector.LogsResponse, error)
+	GatherLogs(context.Context, *rpc.LogsRequest) (*rpc.LogsResponse, error)
 
 	SessionInfo() *manager.SessionInfo
 	RootDaemon() rootdRpc.DaemonClient
@@ -101,7 +100,7 @@ type Session interface {
 	LeaveIngest(context.Context, *rpc.IngestIdentifier) (*rpc.IngestInfo, error)
 }
 
-type NewSessionFunc func(context.Context, ConnectRequest, *client.Kubeconfig) (context.Context, Session, *connector.ConnectInfo)
+type NewSessionFunc func(context.Context, ConnectRequest, *client.Kubeconfig) (context.Context, Session, *rpc.ConnectInfo)
 
 type newSessionKey struct{}
 

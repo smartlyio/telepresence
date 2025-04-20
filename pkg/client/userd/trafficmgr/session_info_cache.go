@@ -2,7 +2,8 @@ package trafficmgr
 
 import (
 	"context"
-	"os"
+	"errors"
+	"io/fs"
 	"path/filepath"
 
 	"github.com/telepresenceio/telepresence/rpc/v2/manager"
@@ -38,7 +39,7 @@ func LoadSessionInfoFromUserCache(ctx context.Context, daemonID *daemon.Identifi
 	if err == nil && ss.KubeContext == daemonID.KubeContext && ss.Namespace == daemonID.Namespace {
 		return ss.Session, nil
 	}
-	if err != nil && os.IsNotExist(err) {
+	if err != nil && errors.Is(err, fs.ErrNotExist) {
 		err = nil
 	}
 	return nil, err

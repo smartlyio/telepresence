@@ -15,6 +15,7 @@ func quit() *cobra.Command {
 		Short: "Tell telepresence daemons to quit",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if quitDaemons {
+				connect.InitProgressWriter(cmd)
 				connect.Quit(cmd.Context())
 			} else {
 				cmd.Annotations = map[string]string{ann.UserDaemon: ann.Optional}

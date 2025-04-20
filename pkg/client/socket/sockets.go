@@ -74,7 +74,7 @@ func Dial(ctx context.Context, socketName string, waitForSocket bool, opts ...gr
 			grpc.WithNoProxy(),
 		}, opts...)...)
 		return err
-	}, &b)
+	}, backoff.WithContext(&b, ctx))
 
 	if err == nil {
 		ctx, cancel := context.WithTimeout(ctx, 3*time.Second)

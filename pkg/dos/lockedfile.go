@@ -2,6 +2,7 @@ package dos
 
 import (
 	"context"
+	"errors"
 	"io/fs"
 	"os"
 
@@ -37,7 +38,7 @@ func (*lockedFs) Open(name string) (File, error) {
 func (fs *lockedFs) OpenFile(name string, flag int, perm fs.FileMode) (File, error) {
 	if fs.mustChown() {
 		if (flag & os.O_CREATE) == os.O_CREATE {
-			if _, err := os.Stat(name); os.IsNotExist(err) {
+			if _, err := os.Stat(name); errors.Is(err, os.ErrNotExist) {
 				f, err := lockedfile.OpenFile(name, flag, perm)
 				if err != nil {
 					return nil, err

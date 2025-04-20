@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"os"
 	"runtime"
@@ -85,7 +86,7 @@ func latestPluginVersion(ctx context.Context, pluginName string) (ver semver.Ver
 	file := "volume-plugin-info.json"
 	pi := pluginInfo{}
 	if err = cache.LoadFromUserCache(ctx, &pi, file); err != nil {
-		if !os.IsNotExist(err) {
+		if !errors.Is(err, fs.ErrNotExist) {
 			return ver, err
 		}
 		pi.LastCheck = 0

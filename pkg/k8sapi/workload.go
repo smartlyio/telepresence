@@ -304,8 +304,8 @@ func (o *deployment) Update(c context.Context) error {
 }
 
 func (o *deployment) Updated(origGeneration int64) bool {
-	applied := o.ObjectMeta.Generation >= origGeneration &&
-		o.Status.ObservedGeneration == o.ObjectMeta.Generation &&
+	applied := o.Generation >= origGeneration &&
+		o.Status.ObservedGeneration == o.Generation &&
 		(o.Spec.Replicas == nil || o.Status.UpdatedReplicas >= *o.Spec.Replicas) &&
 		o.Status.UpdatedReplicas == o.Status.Replicas &&
 		o.Status.AvailableReplicas == o.Status.Replicas
@@ -384,8 +384,8 @@ func (o *rollout) Update(c context.Context) error {
 }
 
 func (o *rollout) Updated(origGeneration int64) bool {
-	applied := o.ObjectMeta.Generation >= origGeneration &&
-		o.Status.ObservedGeneration == strconv.FormatInt(o.ObjectMeta.Generation, 10) &&
+	applied := o.Generation >= origGeneration &&
+		o.Status.ObservedGeneration == strconv.FormatInt(o.Generation, 10) &&
 		(o.Spec.Replicas == nil || o.Status.UpdatedReplicas >= *o.Spec.Replicas) &&
 		o.Status.UpdatedReplicas == o.Status.Replicas &&
 		o.Status.AvailableReplicas == o.Status.Replicas
@@ -460,8 +460,8 @@ func (o *replicaSet) Update(c context.Context) error {
 }
 
 func (o *replicaSet) Updated(origGeneration int64) bool {
-	applied := o.ObjectMeta.Generation >= origGeneration &&
-		o.Status.ObservedGeneration == o.ObjectMeta.Generation &&
+	applied := o.Generation >= origGeneration &&
+		o.Status.ObservedGeneration == o.Generation &&
 		(o.Spec.Replicas == nil || o.Status.Replicas >= *o.Spec.Replicas) &&
 		o.Status.FullyLabeledReplicas == o.Status.Replicas &&
 		o.Status.AvailableReplicas == o.Status.Replicas
@@ -536,8 +536,8 @@ func (o *statefulSet) Update(c context.Context) error {
 }
 
 func (o *statefulSet) Updated(origGeneration int64) bool {
-	applied := o.ObjectMeta.Generation >= origGeneration &&
-		o.Status.ObservedGeneration == o.ObjectMeta.Generation &&
+	applied := o.Generation >= origGeneration &&
+		o.Status.ObservedGeneration == o.Generation &&
 		(o.Spec.Replicas == nil || o.Status.UpdatedReplicas >= *o.Spec.Replicas) &&
 		o.Status.UpdatedReplicas == o.Status.Replicas &&
 		o.Status.CurrentReplicas == o.Status.Replicas

@@ -75,7 +75,7 @@ func (kc *Cluster) check(c context.Context) error {
 		for attempts := 0; attempts < 4; attempts++ {
 			if info, err = k8sapi.GetK8sInterface(c).Discovery().ServerVersion(); err != nil {
 				if strings.Contains(err.Error(), "connection refused") {
-					dlog.Warnf(c, "Connection to connect failed, retry %d", attempts+1)
+					dlog.Warnf(c, "Attempt to connect failed, retry %d", attempts+1)
 					dtime.SleepWithContext(c, 400*time.Millisecond)
 					continue
 				}

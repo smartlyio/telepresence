@@ -2,33 +2,46 @@ package itest
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/sirupsen/logrus"
 	"sigs.k8s.io/yaml"
 
+	"github.com/telepresenceio/telepresence/v2/pkg/client"
 	"github.com/telepresenceio/telepresence/v2/pkg/dos"
 	"github.com/telepresenceio/telepresence/v2/pkg/filelocation"
 	"github.com/telepresenceio/telepresence/v2/pkg/maps"
 )
 
 type itestConfig struct {
-	Env map[string]string `json:"env,omitempty"`
+	Env    map[string]string `json:"Env,omitempty"`
+	Config client.Config     `json:"Config,omitempty"`
 }
 
-func LoadEnv(ctx context.Context) context.Context {
+func LoadEnvAndConfig(ctx context.Context) context.Context {
 	cf := filepath.Join(filelocation.AppUserConfigDir(ctx), "itest.yml")
 	data, err := os.ReadFile(cf)
 	var icEnv map[string]string
+	icConfig := client.GetDefaultConfig()
 	if err != nil {
-		if !os.IsNotExist(err) {
+		if !errors.Is(err, fs.ErrNotExist) {
 			getT(ctx).Fatal(cf, err)
 		}
 	} else {
 		var ic itestConfig
-		if err := yaml.Unmarshal(data, &ic); err != nil {
+		data, err := yaml.YAMLToJSON(data)
+		if err == nil {
+			ic.Config = icConfig
+			ic.Config.LogLevels().UserDaemon = logrus.DebugLevel
+			ic.Config.LogLevels().RootDaemon = logrus.DebugLevel
+			err = client.UnmarshalJSON(data, &ic, true)
+		}
+		if err != nil {
 			getT(ctx).Fatal(cf, err)
 			return ctx
 		}
@@ -57,6 +70,8 @@ func LoadEnv(ctx context.Context) context.Context {
 	} else {
 		dosEnv["PATH"] = buildBin
 	}
+
+	ctx = client.WithConfig(ctx, icConfig)
 	return dos.WithEnv(ctx, dosEnv)
 }
 
