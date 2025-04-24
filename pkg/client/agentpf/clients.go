@@ -95,7 +95,7 @@ func (ac *client) ensureConnectLocked(ctx context.Context) (agent.AgentClient, e
 		defer dialCancel()
 
 		ai := ac.info
-		conn, cli, _, err := k8sclient.ConnectToAgent(dialCtx, ai.PodName, ai.Namespace, uint16(ai.ApiPort), types.UID(ai.PodId))
+		conn, cli, _, err := k8sclient.ConnectToAgent(ctx, dialCtx, ai.PodName, ai.Namespace, uint16(ai.ApiPort), types.UID(ai.PodId))
 		if err != nil {
 			ac.connectErr = err
 			ac.remove()

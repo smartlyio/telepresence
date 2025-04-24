@@ -334,14 +334,14 @@ func (s *session) ManagerVersion() semver.Version {
 
 // connectMgr returns a session for the given cluster that is connected to the traffic-manager.
 func connectMgr(
-	ctx context.Context,
+	longLivedCtx context.Context,
 	cluster *k8s.Cluster,
 	installID string,
 	cr *rpc.ConnectRequest,
 ) (*session, error) {
-	tos := client.GetConfig(ctx).Timeouts()
+	tos := client.GetConfig(longLivedCtx).Timeouts()
 
-	ctx, cancel := tos.TimeoutContext(ctx, client.TimeoutTrafficManagerConnect)
+	ctx, cancel := tos.TimeoutContext(longLivedCtx, client.TimeoutTrafficManagerConnect)
 	defer cancel()
 
 	mgrNs := k8s.GetManagerNamespace(ctx)
@@ -350,7 +350,7 @@ func connectMgr(
 		return nil, err
 	}
 
-	conn, mClient, vi, err := k8sclient.ConnectToManager(ctx, mgrNs)
+	conn, mClient, vi, err := k8sclient.ConnectToManager(longLivedCtx, ctx, mgrNs)
 	if err != nil {
 		return nil, err
 	}
