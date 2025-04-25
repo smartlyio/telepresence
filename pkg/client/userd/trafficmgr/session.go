@@ -601,8 +601,8 @@ func (s *session) getInfosForWorkloads(
 		filterMatch := rpc.ListRequest_EVERYTHING
 
 		filterMatch &= ^(rpc.ListRequest_REPLACEMENTS | rpc.ListRequest_INTERCEPTS)
-		if wlInfo.InterceptInfos, ok = iMap[name]; ok {
-			for _, ii := range wlInfo.InterceptInfos {
+		if wlInfo.InterceptInfo, ok = iMap[name]; ok {
+			for _, ii := range wlInfo.InterceptInfo {
 				if ii.Spec.NoDefaultPort {
 					filterMatch |= rpc.ListRequest_REPLACEMENTS
 				} else {
@@ -610,7 +610,7 @@ func (s *session) getInfosForWorkloads(
 				}
 			}
 		}
-		if wlInfo.IngestInfos, ok = gMap[name]; !ok {
+		if wlInfo.IngestInfo, ok = gMap[name]; !ok {
 			filterMatch &= ^rpc.ListRequest_INGESTS
 		}
 		if wlInfo.AgentVersion, ok = sMap[name]; !ok {

@@ -58,13 +58,13 @@ func leaveCmd() *cobra.Command {
 
 			var completions []string
 			for _, wl := range resp.Workloads {
-				for _, ii := range wl.InterceptInfos {
+				for _, ii := range wl.InterceptInfo {
 					name := ii.Spec.Name
 					if strings.HasPrefix(name, toComplete) {
 						completions = append(completions, name)
 					}
 				}
-				for _, ig := range wl.IngestInfos {
+				for _, ig := range wl.IngestInfo {
 					name := ig.Workload
 					if strings.HasPrefix(name, toComplete) {
 						completions = append(completions, name)
