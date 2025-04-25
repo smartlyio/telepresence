@@ -10,7 +10,9 @@ import (
 // based on HTTP, since we'll likely be running the Injector as an HTTP service
 // from this same executable anyhow.
 
-type HealthChecker struct{}
+type HealthChecker struct {
+	grpc_health_v1.UnimplementedHealthServer
+}
 
 func (s *HealthChecker) Check(ctx context.Context, _ *grpc_health_v1.HealthCheckRequest) (*grpc_health_v1.HealthCheckResponse, error) {
 	return &grpc_health_v1.HealthCheckResponse{
