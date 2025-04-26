@@ -41,7 +41,7 @@ func (m *managerGRPCSuite) SetupSuite() {
 
 	ctx = portforward.WithRestConfig(ctx, k8sCluster.RestConfig)
 	m.Require().NoError(err)
-	m.conn, m.client, _, err = k8sclient.ConnectToManager(ctx, m.ManagerNamespace())
+	m.conn, m.client, _, err = k8sclient.ConnectToManager(ctx, ctx, m.ManagerNamespace())
 	m.Require().NoError(err)
 
 	_, err = m.client.Version(ctx, &empty.Empty{})

@@ -264,7 +264,7 @@ func connectToManager(
 	tc, cancel := tos.TimeoutContext(ctx, client.TimeoutTrafficManagerConnect)
 	defer cancel()
 
-	conn, mc, ver, err := k8sclient.ConnectToManager(tc, namespace)
+	conn, mc, ver, err := k8sclient.ConnectToManager(ctx, tc, namespace)
 	if err != nil {
 		return ctx, nil, nil, mgrVer, err
 	}

@@ -570,24 +570,24 @@ $defs:
     - Never
     - IfNotPresent
   affinity:
-    $ref: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.2/_definitions.json#/definitions/io.k8s.api.core.v1.Affinity
+    $ref: "#/definitions/io.k8s.api.core.v1.Affinity"
   labelSelector:
-    $ref: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.2/_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.LabelSelector
+    $ref: "#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.LabelSelector"
   localObjectReference:
-    $ref: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.2/_definitions.json#/definitions/io.k8s.api.core.v1.LocalObjectReference
+    $ref: "#/definitions/io.k8s.api.core.v1.LocalObjectReference"
   nodeSelector:
-    $ref: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.2/_definitions.json#/definitions/io.k8s.api.core.v1.NodeSelector
+    $ref: "#/definitions/io.k8s.api.core.v1.NodeSelector"
   resourceRequirements:
-    $ref: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.2/_definitions.json#/definitions/io.k8s.api.core.v1.ResourceRequirements
+    $ref: "#/definitions/io.k8s.api.core.v1.ResourceRequirements"
   podSecurityContext:
-    $ref: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.2/_definitions.json#/definitions/io.k8s.api.core.v1.PodSecurityContext
+    $ref: "#/definitions/io.k8s.api.core.v1.PodSecurityContext"
   probe:
-    $ref: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.2/_definitions.json#/definitions/io.k8s.api.core.v1.Probe
+    $ref: "#/definitions/io.k8s.api.core.v1.Probe"
   quantity:
-    $ref: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.2/_definitions.json#/definitions/io.k8s.apimachinery.pkg.api.resource.Quantity
+    $ref: "#/definitions/io.k8s.apimachinery.pkg.api.resource.Quantity"
   securityContext:
-    $ref: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.2/_definitions.json#/definitions/io.k8s.api.core.v1.SecurityContext
+    $ref: "#/definitions/io.k8s.api.core.v1.SecurityContext"
   subject:
-    $ref: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.2/_definitions.json#/definitions/io.k8s.api.rbac.v1.Subject
+    $ref: "#/definitions/io.k8s.api.rbac.v1.Subject"
   toleration:
-    $ref: https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/v1.32.2/_definitions.json#/definitions/io.k8s.api.core.v1.Toleration
+    $ref: "#/definitions/io.k8s.api.core.v1.Toleration"

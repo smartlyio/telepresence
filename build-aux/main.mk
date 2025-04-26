@@ -505,3 +505,10 @@ push-udp-echo:
 		docker buildx build --platform=linux/amd64,linux/arm64 --push \
 		 --tag ghcr.io/telepresenceio/udp-echo:latest \
 		 --tag ghcr.io/telepresenceio/udp-echo:0.1.0 .)
+
+
+K8S_VERSION ?= $(shell go list -m k8s.io/client-go | awk '{print $$2}' | sed -e 's/v0./v1./')
+charts/telepresence-oss/k8s-defs.json: go.mod
+	curl -o $@ --fail -L https://raw.githubusercontent.com/yannh/kubernetes-json-schema/master/$(K8S_VERSION)-standalone/_definitions.json
+
+build-deps: charts/telepresence-oss/k8s-defs.json
