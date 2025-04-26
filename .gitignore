@@ -31,8 +31,10 @@ traffic
 tst-manager
 !/cmd/*/
 
-# The Chart directory
-!/charts/telepresence
+# Include Chart directory
+!/charts/telepresence-oss
+# But don't include this one
+/charts/telepresence-oss/k8s-defs.json
 
 # Downloaded fuseftp bits
 fuseftp.bits
@@ -48,3 +50,4 @@ fuseftp.bits
 # Vagrant
 .vagrant/
 tests.log
+

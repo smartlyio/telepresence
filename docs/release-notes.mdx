@@ -9,6 +9,12 @@ import { Note, Title, Body } from '@site/src/components/ReleaseNotes'
 # Telepresence Release Notes
 ## Version 2.22.4
 <Note>
+	<Title type="bugfix">Don't require internet access when installing the traffic-manager using Helm</Title>
+	<Body>
+A regression occurred with the introduction of Helm validation in version 2.22.0. The schema relied on external HTTPS links, which inadvertently created a requirement for internet accessibility. To resolve this, we have embedded these resources within the schema, thus removing the need for an internet connection.
+  </Body>
+</Note>
+<Note>
 	<Title type="bugfix">Client failed connect with "failed to exit idle mode" in the connector.log after being idle</Title>
 	<Body>
 The port-forward connections used for connecting the daemon to the traffic-agents were using an incorrect context, causing them to fail after being idle for some time.
