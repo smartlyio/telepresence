@@ -334,14 +334,14 @@ func (s *session) ManagerVersion() semver.Version {
 
 // connectMgr returns a session for the given cluster that is connected to the traffic-manager.
 func connectMgr(
-	ctx context.Context,
+	longLivedCtx context.Context,
 	cluster *k8s.Cluster,
 	installID string,
 	cr *rpc.ConnectRequest,
 ) (*session, error) {
-	tos := client.GetConfig(ctx).Timeouts()
+	tos := client.GetConfig(longLivedCtx).Timeouts()
 
-	ctx, cancel := tos.TimeoutContext(ctx, client.TimeoutTrafficManagerConnect)
+	ctx, cancel := tos.TimeoutContext(longLivedCtx, client.TimeoutTrafficManagerConnect)
 	defer cancel()
 
 	mgrNs := k8s.GetManagerNamespace(ctx)
@@ -350,7 +350,7 @@ func connectMgr(
 		return nil, err
 	}
 
-	conn, mClient, vi, err := k8sclient.ConnectToManager(ctx, mgrNs)
+	conn, mClient, vi, err := k8sclient.ConnectToManager(longLivedCtx, ctx, mgrNs)
 	if err != nil {
 		return nil, err
 	}
@@ -601,8 +601,8 @@ func (s *session) getInfosForWorkloads(
 		filterMatch := rpc.ListRequest_EVERYTHING
 
 		filterMatch &= ^(rpc.ListRequest_REPLACEMENTS | rpc.ListRequest_INTERCEPTS)
-		if wlInfo.InterceptInfos, ok = iMap[name]; ok {
-			for _, ii := range wlInfo.InterceptInfos {
+		if wlInfo.InterceptInfo, ok = iMap[name]; ok {
+			for _, ii := range wlInfo.InterceptInfo {
 				if ii.Spec.NoDefaultPort {
 					filterMatch |= rpc.ListRequest_REPLACEMENTS
 				} else {
@@ -610,7 +610,7 @@ func (s *session) getInfosForWorkloads(
 				}
 			}
 		}
-		if wlInfo.IngestInfos, ok = gMap[name]; !ok {
+		if wlInfo.IngestInfo, ok = gMap[name]; !ok {
 			filterMatch &= ^rpc.ListRequest_INGESTS
 		}
 		if wlInfo.AgentVersion, ok = sMap[name]; !ok {

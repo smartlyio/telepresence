@@ -19,9 +19,9 @@ import (
 	"github.com/telepresenceio/telepresence/v2/pkg/client/portforward"
 )
 
-func ConnectToManager(ctx context.Context, namespace string) (*grpc.ClientConn, manager.ManagerClient, *manager.VersionInfo2, error) {
+func ConnectToManager(longLivedCtx, ctx context.Context, namespace string) (*grpc.ClientConn, manager.ManagerClient, *manager.VersionInfo2, error) {
 	grpcAddr := net.JoinHostPort("svc/traffic-manager."+namespace, "api")
-	conn, err := dialClusterGRPC(ctx, grpcAddr)
+	conn, err := dialClusterGRPC(longLivedCtx, grpcAddr)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -39,6 +39,7 @@ type versionAPI interface {
 }
 
 func ConnectToAgent(
+	longLivedCtx context.Context,
 	ctx context.Context,
 	podName, namespace string,
 	port uint16,
@@ -50,7 +51,7 @@ func ConnectToAgent(
 	} else {
 		grpcAddr = fmt.Sprintf("pod/%s.%s:%d#%s", podName, namespace, port, podID)
 	}
-	conn, err := dialClusterGRPC(ctx, grpcAddr)
+	conn, err := dialClusterGRPC(longLivedCtx, grpcAddr)
 	if err != nil {
 		return nil, nil, nil, err
 	}

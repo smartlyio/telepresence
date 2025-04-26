@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/go-json-experiment/json"
 	"github.com/spf13/afero"
 	"helm.sh/helm/v3/pkg/chart"
 	"sigs.k8s.io/yaml"
@@ -137,7 +138,22 @@ func WriteChart(helmChartDir DirType, out io.Writer, chartName, version string, 
 			if err != nil {
 				return err
 			}
-			content, err = yaml.YAMLToJSON(content)
+			defs, err := fs.ReadFile(baseDir, fmt.Sprintf("%s/k8s-defs.json", chartName))
+			if err != nil {
+				return err
+			}
+			contentMap := make(map[string]any)
+			err = yaml.Unmarshal(content, &contentMap)
+			if err != nil {
+				return err
+			}
+			defsMap := make(map[string]any)
+			err = json.Unmarshal(defs, &defsMap)
+			if err != nil {
+				return err
+			}
+			contentMap["definitions"] = defsMap["definitions"]
+			content, err = json.Marshal(contentMap)
 			if err != nil {
 				return err
 			}

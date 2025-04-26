@@ -24,6 +24,30 @@
 #
 # For older changes, see CHANGELOG.OLD.md
 items:
+  - version: 2.22.4
+    date: (TBD)
+    notes:
+      - type: bugfix
+        title: Don't require internet access when installing the traffic-manager using Helm
+        body: >-
+          A regression occurred with the introduction of Helm validation in version 2.22.0. The schema relied on
+          external HTTPS links, which inadvertently created a requirement for internet accessibility. To resolve this,
+          we have embedded these resources within the schema, thus removing the need for an internet connection.
+      - type: bugfix
+        title: Client failed connect with "failed to exit idle mode" in the connector.log after being idle
+        body: >-
+          The port-forward connections used for connecting the daemon to the traffic-agents were using
+          an incorrect context, causing them to fail after being idle for some time.
+      - type: bugfix
+        title: Fix deadlock in Telepresence daemon
+        body: >-
+          A deadlock would sometimes occur in the Telepresence daemon that prevented it from doing a clean
+          exit during `telepresence quit`.
+      - type: bugfix
+        title: Don't log error message when a pod watcher ends due to cancellation
+        body: >-
+          Errors printed in the daemon log during normal cancellation of the WatchAgentPods goroutine are
+          now removed.
   - version: 2.22.3
     date: 2025-04-08
     notes:

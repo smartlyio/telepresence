@@ -73,7 +73,6 @@ func (ac *client) Tunnel(ctx context.Context, opts ...grpc.CallOption) (tunnel.C
 		if tc > 0 {
 			atomic.CompareAndSwapInt32(&ac.tunnelCount, tc, tc-1)
 		}
-		atomic.AddInt32(&ac.tunnelCount, -1)
 		dlog.Debugf(ctx, "%s(%s) have %d active tunnels", ac, net.IP(ac.info.PodIp), atomic.LoadInt32(&ac.tunnelCount))
 	}()
 	atomic.StoreInt64(&ac.lastActive, time.Now().UnixNano())
@@ -96,7 +95,7 @@ func (ac *client) ensureConnectLocked(ctx context.Context) (agent.AgentClient, e
 		defer dialCancel()
 
 		ai := ac.info
-		conn, cli, _, err := k8sclient.ConnectToAgent(dialCtx, ai.PodName, ai.Namespace, uint16(ai.ApiPort), types.UID(ai.PodId))
+		conn, cli, _, err := k8sclient.ConnectToAgent(ctx, dialCtx, ai.PodName, ai.Namespace, uint16(ai.ApiPort), types.UID(ai.PodId))
 		if err != nil {
 			ac.connectErr = err
 			ac.remove()
@@ -401,6 +400,8 @@ outer:
 			case codes.Unimplemented:
 				dlog.Debug(ctx, "traffic-manager does not implement WatchAgentPods")
 				return nil
+			case codes.Canceled:
+				return nil
 			default:
 				return err
 			}
@@ -570,7 +571,7 @@ func (s *clients) updateClients(ctx context.Context, ais []*manager.AgentPodInfo
 			ac := &client{
 				session: s.session,
 				remove: func() {
-					deleteClient(k)
+					s.clients.Delete(k)
 				},
 				info: ai,
 			}
